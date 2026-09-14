@@ -18,6 +18,9 @@ body {
 }
 .top h1 { font-size: 20px; margin: 0 0 4px; }
 .top p { margin: 0 0 16px; color: var(--muted); }
+.mode { display: flex; gap: 18px; margin: 0 0 8px; }
+.mode label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; cursor: pointer; }
+.mode input { width: 16px; height: 16px; margin: 0; }
 main { max-width: 1100px; margin: 0 auto; display: grid; gap: 12px; }
 .panel {
   background: var(--panel);

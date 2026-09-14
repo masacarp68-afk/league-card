@@ -1,8 +1,8 @@
 // 画面の配線：貼り付け → パース → 描画、設定の保存、コピー／ダウンロード
-import { parseStandings, ParseError } from './parse.js';
+import { parseStandings, parseJantoryu, ParseError } from './parse.js';
 import { renderStandings } from './render.js';
 
-const STORAGE_KEY = 'league-card.settings';
+const MODE_KEY = 'league-card.mode';
 // ロゴは assets/logo.(webp|png|jpg) のどれかを置く。先に見つかったものを使う
 const LOGO_URLS = ['assets/logo.webp', 'assets/logo.png', 'assets/logo.jpg'];
 
@@ -17,40 +17,58 @@ const THEMES = [
   { id: 'custom', label: 'カスタム', color: null },
 ];
 
-const DEFAULTS = {
-  title: '第○期 日本プロ麻雀協会【A○】リーグ',
-  session: '第○節',
-  totalSessions: 12,
-  totalGames: 48,
-  promote1: 3,
-  promote2: 0,
-  promote3: 0,
-  demote1: 4,
-  demote2: 0,
-  theme: 'navy',
-  color: '#1c2f7a',
-  showGames: true,
+// リーグ戦／雀竜位戦。設定はモードごとに別のキーに保存する（リーグ戦は旧来のキーのまま）
+const MODES = {
+  league: {
+    storageKey: 'league-card.settings',
+    parse: parseStandings,
+    upTitle: '昇級（上位から）',
+    downTitle: '降級（下位から）',
+    defaults: { title: '第○期 日本プロ麻雀協会【A○】リーグ', session: '第○節', totalSessions: 12, totalGames: 48, promote1: 3, demote1: 4 },
+  },
+  jantoryu: {
+    storageKey: 'league-card.settings.jantoryu',
+    parse: parseJantoryu,
+    upTitle: '通過（上位から）',
+    downTitle: '敗退（下位から）',
+    defaults: { title: '第○期 雀竜位戦【○次予選】', session: '○回戦終了時', totalSessions: 0, totalGames: 6, promote1: 4, demote1: 4 },
+  },
 };
-const FIELDS = Object.keys(DEFAULTS);
+// モード共通の初期値
+const COMMON_DEFAULTS = { promote2: 0, promote3: 0, demote2: 0, theme: 'navy', color: '#1c2f7a', showGames: true };
+const FIELDS = ['title', 'session', 'totalSessions', 'totalGames', 'promote1', 'promote2', 'promote3', 'demote1', 'demote2', 'theme', 'color', 'showGames'];
 
 const $ = id => document.getElementById(id);
+let mode = 'league';
 let canvas = null;
 let fontsReady = false;
 let logo = null;
 
-function loadSettings() {
+function loadMode() {
+  try {
+    const m = localStorage.getItem(MODE_KEY);
+    if (MODES[m]) return m;
+  } catch { /* 初期値 */ }
+  return 'league';
+}
+
+function saveMode(m) {
+  try { localStorage.setItem(MODE_KEY, m); } catch { /* 保存できなくても動く */ }
+}
+
+function loadSettings(m) {
   let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { /* 壊れていれば初期値 */ }
+  try { saved = JSON.parse(localStorage.getItem(MODES[m].storageKey) || '{}'); } catch { /* 壊れていれば初期値 */ }
   // 旧形式（昇級 promote／降級 demote の1段階）は金・赤に引き継ぐ
   if (saved.promote !== undefined && saved.promote1 === undefined) saved.promote1 = saved.promote;
   if (saved.demote !== undefined && saved.demote1 === undefined) saved.demote1 = saved.demote;
-  const s = { ...DEFAULTS };
+  const s = { ...COMMON_DEFAULTS, ...MODES[m].defaults };
   for (const k of FIELDS) if (saved[k] !== undefined) s[k] = saved[k];
   return s;
 }
 
-function saveSettings(s) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch { /* 保存できなくても動く */ }
+function saveSettings(m, s) {
+  try { localStorage.setItem(MODES[m].storageKey, JSON.stringify(s)); } catch { /* 保存できなくても動く */ }
 }
 
 function readSettings() {
@@ -70,6 +88,24 @@ function writeSettings(s) {
     if (el.type === 'checkbox') el.checked = !!s[k];
     else el.value = s[k];
   }
+}
+
+// モードに合わせて案内文・色分けの見出し・ラジオの選択を切り替える
+function applyModeUI() {
+  for (const el of document.querySelectorAll('.guide[data-mode]')) el.hidden = el.dataset.mode !== mode;
+  $('upTitle').textContent = MODES[mode].upTitle;
+  $('downTitle').textContent = MODES[mode].downTitle;
+  for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === mode;
+}
+
+// モードを切り替えて、そのモードの設定を入力欄に戻し、貼り付け内容を読み直す
+function switchMode(m) {
+  if (!MODES[m] || m === mode) return;
+  mode = m;
+  saveMode(mode);
+  writeSettings(loadSettings(mode));
+  applyModeUI();
+  update();
 }
 
 function initThemeSelect() {
@@ -134,7 +170,7 @@ function flash(text) {
 
 async function update() {
   const settings = readSettings();
-  saveSettings(settings);
+  saveSettings(mode, settings);
   const text = $('paste').value;
   if (!text.trim()) {
     canvas = null;
@@ -145,7 +181,7 @@ async function update() {
   }
   let data;
   try {
-    data = parseStandings(text);
+    data = MODES[mode].parse(text);
   } catch (e) {
     canvas = null;
     $('preview').replaceChildren();
@@ -191,10 +227,15 @@ async function downloadImage() {
 
 function init() {
   initThemeSelect();
-  writeSettings(loadSettings());
+  mode = loadMode();
+  writeSettings(loadSettings(mode));
+  applyModeUI();
   loadLogo();
   $('paste').addEventListener('input', update);
   for (const k of FIELDS) $(k).addEventListener('input', update);
+  for (const r of document.querySelectorAll('input[name="mode"]')) {
+    r.addEventListener('change', () => switchMode(r.value));
+  }
   $('copy').addEventListener('click', copyImage);
   $('download').addEventListener('click', downloadImage);
   if (!canCopy()) $('copy').title = 'このブラウザは画像のクリップボードコピーに対応していません';

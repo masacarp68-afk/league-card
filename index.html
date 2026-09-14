@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>リーグ順位表 画像ジェネレーター</title>
+  <title>順位表 画像ジェネレーター</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,8 +11,13 @@
 </head>
 <body>
   <header class="top">
-    <h1>リーグ順位表 画像ジェネレーター</h1>
-    <p>スプレッドシートで「順位／組／登録名／トータル／対局数」を<strong>見出し行ごと</strong>範囲選択してコピー → 下の欄に貼り付け</p>
+    <h1>順位表 画像ジェネレーター</h1>
+    <div class="mode" role="radiogroup" aria-label="種別">
+      <label><input type="radio" name="mode" value="league"> リーグ戦</label>
+      <label><input type="radio" name="mode" value="jantoryu"> 雀竜位戦</label>
+    </div>
+    <p class="guide" data-mode="league">スプレッドシートで「順位／組／登録名／トータル／対局数」を<strong>見出し行ごと</strong>範囲選択してコピー → 下の欄に貼り付け</p>
+    <p class="guide" data-mode="jantoryu" hidden>スプレッドシートで「登録名／ポイント」を<strong>見出し行ごと</strong>範囲選択してコピー（各回戦の列が混ざっていてOK）→ 下の欄に貼り付け</p>
   </header>
   <main>
     <section class="panel">
@@ -27,14 +32,14 @@
       <label>全節数 <input id="totalSessions" type="number" min="0" inputmode="numeric"></label>
       <label>全回戦数 <input id="totalGames" type="number" min="0" inputmode="numeric"></label>
       <div class="zones">
-        <span class="zones-title">昇級（上位から）</span>
+        <span class="zones-title" id="upTitle">昇級（上位から）</span>
         <label><i class="sw sw-gold"></i>金 <input id="promote1" type="number" min="0" inputmode="numeric"> 名</label>
         <label><i class="sw sw-silver"></i>銀 <input id="promote2" type="number" min="0" inputmode="numeric"> 名</label>
         <label><i class="sw sw-bronze"></i>銅 <input id="promote3" type="number" min="0" inputmode="numeric"> 名</label>
         <span class="hint">2・3段階昇級があるリーグは上のグループから順に。1段階だけなら金だけ</span>
       </div>
       <div class="zones">
-        <span class="zones-title">降級（下位から）</span>
+        <span class="zones-title" id="downTitle">降級（下位から）</span>
         <label><i class="sw sw-red"></i>赤 <input id="demote1" type="number" min="0" inputmode="numeric"> 名</label>
         <label><i class="sw sw-pink"></i>薄赤 <input id="demote2" type="number" min="0" inputmode="numeric"> 名</label>
         <span class="hint">足切りなど2段階あるときは、最下位側を赤に</span>
