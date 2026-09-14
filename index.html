@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>リーグ順位表 画像ジェネレーター</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>リーグ順位表 画像ジェネレーター</h1>
+    <p>スプレッドシートで「順位／組／登録名／トータル／対局数」を<strong>見出し行ごと</strong>範囲選択してコピー → 下の欄に貼り付け</p>
+  </header>
+  <main>
+    <section class="panel">
+      <label for="paste">貼り付け</label>
+      <textarea id="paste" rows="6" placeholder="ここに Ctrl+V" spellcheck="false"></textarea>
+      <p id="message" class="message"></p>
+    </section>
+    <section class="panel settings">
+      <label>タイトル <input id="title" type="text" placeholder="第51期 日本プロ麻雀協会 A2リーグ"></label>
+      <label>節 <input id="session" type="text" placeholder="第9節"></label>
+      <label>全節数 <input id="totalSessions" type="number" min="0" inputmode="numeric"></label>
+      <label>全回戦数 <input id="totalGames" type="number" min="0" inputmode="numeric"></label>
+      <label>昇級 上位 <input id="promote" type="number" min="0" inputmode="numeric"> 名</label>
+      <label>降級 下位 <input id="demote" type="number" min="0" inputmode="numeric"> 名</label>
+      <label>テーマ色 <input id="color" type="color"></label>
+    </section>
+    <section class="panel actions">
+      <button id="copy" type="button" disabled>画像をコピー</button>
+      <button id="download" type="button" disabled>ダウンロード</button>
+      <span id="flash" class="flash" role="status"></span>
+    </section>
+    <section id="preview" class="preview" aria-label="プレビュー"></section>
+  </main>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
