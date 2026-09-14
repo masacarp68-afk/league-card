@@ -22,8 +22,11 @@ const DEFAULTS = {
   session: '第○節',
   totalSessions: 12,
   totalGames: 48,
-  promote: 3,
-  demote: 4,
+  promote1: 3,
+  promote2: 0,
+  promote3: 0,
+  demote1: 4,
+  demote2: 0,
   theme: 'navy',
   color: '#1c2f7a',
   showGames: true,
@@ -36,11 +39,14 @@ let fontsReady = false;
 let logo = null;
 
 function loadSettings() {
-  try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') };
-  } catch {
-    return { ...DEFAULTS };
-  }
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { /* 壊れていれば初期値 */ }
+  // 旧形式（昇級 promote／降級 demote の1段階）は金・赤に引き継ぐ
+  if (saved.promote !== undefined && saved.promote1 === undefined) saved.promote1 = saved.promote;
+  if (saved.demote !== undefined && saved.demote1 === undefined) saved.demote1 = saved.demote;
+  const s = { ...DEFAULTS };
+  for (const k of FIELDS) if (saved[k] !== undefined) s[k] = saved[k];
+  return s;
 }
 
 function saveSettings(s) {

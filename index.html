@@ -26,8 +26,19 @@
       <label>節 <input id="session" type="text" placeholder="第9節"></label>
       <label>全節数 <input id="totalSessions" type="number" min="0" inputmode="numeric"></label>
       <label>全回戦数 <input id="totalGames" type="number" min="0" inputmode="numeric"></label>
-      <label>昇級 上位 <input id="promote" type="number" min="0" inputmode="numeric"> 名</label>
-      <label>降級 下位 <input id="demote" type="number" min="0" inputmode="numeric"> 名</label>
+      <div class="zones">
+        <span class="zones-title">昇級（上位から）</span>
+        <label><i class="sw sw-gold"></i>金 <input id="promote1" type="number" min="0" inputmode="numeric"> 名</label>
+        <label><i class="sw sw-silver"></i>銀 <input id="promote2" type="number" min="0" inputmode="numeric"> 名</label>
+        <label><i class="sw sw-bronze"></i>銅 <input id="promote3" type="number" min="0" inputmode="numeric"> 名</label>
+        <span class="hint">2・3段階昇級があるリーグは上のグループから順に。1段階だけなら金だけ</span>
+      </div>
+      <div class="zones">
+        <span class="zones-title">降級（下位から）</span>
+        <label><i class="sw sw-red"></i>赤 <input id="demote1" type="number" min="0" inputmode="numeric"> 名</label>
+        <label><i class="sw sw-pink"></i>薄赤 <input id="demote2" type="number" min="0" inputmode="numeric"> 名</label>
+        <span class="hint">足切りなど2段階あるときは、最下位側を赤に</span>
+      </div>
       <label>テーマ <select id="theme"></select></label>
       <label>テーマ色 <input id="color" type="color"></label>
       <label><input id="showGames" type="checkbox"> 対局数を表示</label>

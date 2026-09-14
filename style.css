@@ -45,6 +45,14 @@ textarea {
 .settings select { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; background: #fff; }
 .settings input[type="checkbox"] { width: 16px; height: 16px; padding: 0; }
 .settings .hint { color: var(--muted); font-size: 12px; }
+.zones { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; width: 100%; }
+.zones-title { font-weight: 700; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); }
+.sw-gold { background: #f6c945; }
+.sw-silver { background: #d7dfea; }
+.sw-bronze { background: #e0965f; }
+.sw-red { background: #e0424e; }
+.sw-pink { background: #f19aa0; }
 .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 button {
   font: inherit;

@@ -2,18 +2,31 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { zoneOf, fmtPt, layoutFor, splitTitle, W, H } from '../js/render.js';
 
-test('zoneOf: 上位は up、下位は down、間は stay', () => {
-  assert.equal(zoneOf(1, 22, 3, 8), 'up');
-  assert.equal(zoneOf(3, 22, 3, 8), 'up');
-  assert.equal(zoneOf(4, 22, 3, 8), 'stay');
-  assert.equal(zoneOf(14, 22, 3, 8), 'stay');
-  assert.equal(zoneOf(15, 22, 3, 8), 'down');
-  assert.equal(zoneOf(22, 22, 3, 8), 'down');
+test('zoneOf: 上位から金・銀・銅、下位から赤・薄赤、間は stay', () => {
+  // 22人：上位1名=金、次2名=銀、次3名=銅／下位4名=赤、その上2名=薄赤
+  const ups = [1, 2, 3], downs = [4, 2];
+  assert.equal(zoneOf(1, 22, ups, downs), 'up1');
+  assert.equal(zoneOf(2, 22, ups, downs), 'up2');
+  assert.equal(zoneOf(3, 22, ups, downs), 'up2');
+  assert.equal(zoneOf(4, 22, ups, downs), 'up3');
+  assert.equal(zoneOf(6, 22, ups, downs), 'up3');
+  assert.equal(zoneOf(7, 22, ups, downs), 'stay');
+  assert.equal(zoneOf(16, 22, ups, downs), 'stay');
+  assert.equal(zoneOf(17, 22, ups, downs), 'down2');
+  assert.equal(zoneOf(18, 22, ups, downs), 'down2');
+  assert.equal(zoneOf(19, 22, ups, downs), 'down1');
+  assert.equal(zoneOf(22, 22, ups, downs), 'down1');
+});
+
+test('zoneOf: 1段階だけなら金と赤だけ', () => {
+  assert.equal(zoneOf(3, 22, [3, 0, 0], [8, 0]), 'up1');
+  assert.equal(zoneOf(4, 22, [3, 0, 0], [8, 0]), 'stay');
+  assert.equal(zoneOf(15, 22, [3, 0, 0], [8, 0]), 'down1');
 });
 
 test('zoneOf: 0 人なら全員 stay', () => {
-  assert.equal(zoneOf(1, 10, 0, 0), 'stay');
-  assert.equal(zoneOf(10, 10, 0, 0), 'stay');
+  assert.equal(zoneOf(1, 10, [0, 0, 0], [0, 0]), 'stay');
+  assert.equal(zoneOf(10, 10, [0, 0, 0], [0, 0]), 'stay');
 });
 
 test('fmtPt: プラスは +、マイナスは ▲、小数1桁', () => {

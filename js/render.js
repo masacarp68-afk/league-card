@@ -19,17 +19,28 @@ const COLORS = {
   footer: 'rgba(255,255,255,0.75)',
 };
 
-// 昇級／残留／降級ゾーンごとのカードの色
+// ゾーンごとのカードの色。昇級は上位から 金→銀→銅、降級は下位から 赤→薄赤
 const ZONE_STYLE = {
-  up:   { fill: 'rgba(214,176,52,0.22)', strip: 'rgba(214,176,52,0.28)', border: 'rgba(246,201,69,0.8)',  rank: '#f6c945' },
-  stay: { fill: 'rgba(0,0,0,0.30)',      strip: 'rgba(0,0,0,0.32)',      border: 'rgba(255,255,255,0.28)', rank: '#ffffff' },
-  down: { fill: 'rgba(170,28,40,0.45)',  strip: 'rgba(120,10,20,0.5)',   border: 'rgba(255,110,110,0.65)', rank: '#ff6b6b' },
+  up1:   { fill: 'rgba(214,176,52,0.22)',  strip: 'rgba(214,176,52,0.28)',  border: 'rgba(246,201,69,0.8)',   rank: '#f6c945' },
+  up2:   { fill: 'rgba(190,200,215,0.20)', strip: 'rgba(190,200,215,0.26)', border: 'rgba(215,225,240,0.8)',  rank: '#e3eaf4' },
+  up3:   { fill: 'rgba(196,120,70,0.22)',  strip: 'rgba(196,120,70,0.28)',  border: 'rgba(230,150,95,0.8)',   rank: '#eaa877' },
+  stay:  { fill: 'rgba(0,0,0,0.30)',       strip: 'rgba(0,0,0,0.32)',       border: 'rgba(255,255,255,0.28)', rank: '#ffffff' },
+  down2: { fill: 'rgba(170,28,40,0.22)',   strip: 'rgba(120,10,20,0.28)',   border: 'rgba(255,110,110,0.45)', rank: '#ff9a9a' },
+  down1: { fill: 'rgba(170,28,40,0.45)',   strip: 'rgba(120,10,20,0.5)',    border: 'rgba(255,110,110,0.65)', rank: '#ff6b6b' },
 };
 
-// 順位から昇級／残留／降級ゾーンを判定
-export function zoneOf(rank, playerCount, promote, demote) {
-  if (promote > 0 && rank <= promote) return 'up';
-  if (demote > 0 && rank > playerCount - demote) return 'down';
+// 順位からゾーンを判定。ups = 上位からのグループ人数 [金, 銀, 銅]、downs = 下位からのグループ人数 [赤, 薄赤]
+export function zoneOf(rank, playerCount, ups, downs) {
+  let acc = 0;
+  for (let i = 0; i < ups.length; i++) {
+    acc += Number(ups[i]) || 0;
+    if (rank <= acc) return `up${i + 1}`;
+  }
+  acc = 0;
+  for (let i = 0; i < downs.length; i++) {
+    acc += Number(downs[i]) || 0;
+    if (acc > 0 && rank > playerCount - acc) return `down${i + 1}`;
+  }
   return 'stay';
 }
 
@@ -274,14 +285,14 @@ function drawPlayers(ctx, players, s) {
     totalGames: Number(s.totalGames) || 0,
     showGames: s.showGames !== false,
   };
-  const promote = Number(s.promote) || 0;
-  const demote = Number(s.demote) || 0;
+  const ups = [s.promote1, s.promote2, s.promote3];
+  const downs = [s.demote1, s.demote2];
   players.forEach((p, i) => {
     // 見本と同じく縦に埋めて次の列へ（1〜8 が左列、9〜16 が次の列…）
     const col = Math.floor(i / rows), row = i % rows;
     const x = MARGIN + col * (colW + COL_GAP);
     const y = BODY_TOP + row * (rowH + ROW_GAP);
-    drawPlayerRow(ctx, p, x, y, colW, rowH, zoneOf(p.rank, n, promote, demote), opts);
+    drawPlayerRow(ctx, p, x, y, colW, rowH, zoneOf(p.rank, n, ups, downs), opts);
   });
 }
 
@@ -299,7 +310,7 @@ function drawFooter(ctx, s) {
 }
 
 // data: { players: [{ rank, name, total, games }] }
-// settings: { title, session, totalSessions, totalGames, promote, demote, color, showGames }
+// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames }
 // assets: { logo: HTMLImageElement | null }
 export function renderStandings(data, settings, assets = {}) {
   const canvas = document.createElement('canvas');
