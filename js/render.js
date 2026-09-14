@@ -129,18 +129,49 @@ function drawBackground(ctx, color) {
   drawStars(ctx);
 }
 
+// ロゴ画像の白い余白を除いた範囲（元画像のピクセル座標）。一度計算したら画像に覚えさせる
+function logoContentRect(logo) {
+  if (logo._contentRect) return logo._contentRect;
+  const w = logo.naturalWidth, h = logo.naturalHeight;
+  let rect = { x: 0, y: 0, w, h };
+  try {
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const c = off.getContext('2d');
+    c.drawImage(logo, 0, 0);
+    const d = c.getImageData(0, 0, w, h).data;
+    let minX = w, minY = h, maxX = -1, maxY = -1;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        // 透明か白に近いピクセルは余白とみなす
+        if (d[i + 3] < 16) continue;
+        if (d[i] > 235 && d[i + 1] > 235 && d[i + 2] > 235) continue;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+    if (maxX >= minX && maxY >= minY) rect = { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+  } catch { /* 読めなければ全体を使う */ }
+  logo._contentRect = rect;
+  return rect;
+}
+
 // 右上にロゴを白いプレートに載せて描く。プレートの幅を返す（ロゴ無しなら 0）
 function drawLogo(ctx, logo) {
   if (!logo || !logo.naturalWidth) return 0;
-  const plateH = 124, pad = 10;
+  const src = logoContentRect(logo);
+  const plateH = 136, pad = 14;
   const imgH = plateH - pad * 2;
-  const imgW = imgH * logo.naturalWidth / logo.naturalHeight;
+  const imgW = imgH * src.w / src.h;
   const plateW = imgW + pad * 2;
-  const x = W - MARGIN - plateW, y = 26;
+  const x = W - MARGIN - plateW, y = 22;
   roundRect(ctx, x, y, plateW, plateH, 14);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
-  ctx.drawImage(logo, x + pad, y + pad, imgW, imgH);
+  ctx.drawImage(logo, src.x, src.y, src.w, src.h, x + pad, y + pad, imgW, imgH);
   return plateW;
 }
 
