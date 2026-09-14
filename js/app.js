@@ -3,7 +3,8 @@ import { parseStandings, ParseError } from './parse.js';
 import { renderStandings } from './render.js';
 
 const STORAGE_KEY = 'league-card.settings';
-const LOGO_URL = 'assets/logo.png';
+// ロゴは assets/logo.(webp|png|jpg) のどれかを置く。先に見つかったものを使う
+const LOGO_URLS = ['assets/logo.webp', 'assets/logo.png', 'assets/logo.jpg'];
 
 // 背景のテーマ。色ピッカーを直接いじると「カスタム」になる
 const THEMES = [
@@ -80,12 +81,13 @@ function initThemeSelect() {
   $('color').addEventListener('input', () => { sel.value = 'custom'; });
 }
 
-// ロゴ（assets/logo.png）があれば読み込んで再描画。無ければロゴ無しで描く
-function loadLogo() {
+// ロゴがあれば読み込んで再描画。どれも無ければロゴ無しで描く
+function loadLogo(i = 0) {
+  if (i >= LOGO_URLS.length) { logo = null; return; }
   const img = new Image();
   img.onload = () => { logo = img; update(); };
-  img.onerror = () => { logo = null; };
-  img.src = LOGO_URL;
+  img.onerror = () => loadLogo(i + 1);
+  img.src = LOGO_URLS[i];
 }
 
 // Google Fonts の読み込みを待つ（失敗してもシステムフォントで描く）
