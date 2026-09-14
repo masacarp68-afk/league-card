@@ -42,6 +42,9 @@ textarea {
 .settings input[type="number"] { width: 64px; }
 .settings input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
 .settings input[type="color"] { width: 44px; height: 32px; padding: 2px; }
+.settings select { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; background: #fff; }
+.settings input[type="checkbox"] { width: 16px; height: 16px; padding: 0; }
+.settings .hint { color: var(--muted); font-size: 12px; }
 .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 button {
   font: inherit;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneOf, fmtPt, layoutFor, W, H } from '../js/render.js';
+import { zoneOf, fmtPt, layoutFor, splitTitle, W, H } from '../js/render.js';
 
 test('zoneOf: 上位は up、下位は down、間は stay', () => {
   assert.equal(zoneOf(1, 22, 3, 8), 'up');
@@ -16,23 +16,36 @@ test('zoneOf: 0 人なら全員 stay', () => {
   assert.equal(zoneOf(10, 10, 0, 0), 'stay');
 });
 
-test('fmtPt: 符号付き小数1桁', () => {
+test('fmtPt: プラスは +、マイナスは ▲、小数1桁', () => {
   assert.equal(fmtPt(374.9), '+374.9');
-  assert.equal(fmtPt(-14.7), '-14.7');
+  assert.equal(fmtPt(-14.7), '▲14.7');
   assert.equal(fmtPt(0), '+0.0');
   assert.equal(fmtPt(-0.04), '+0.0');
   assert.equal(fmtPt(12), '+12.0');
 });
 
-test('layoutFor: 24人以下は3列、25人以上は4列', () => {
+test('layoutFor: 26人以下は3列、48人以下は4列、それ以上は5列', () => {
   assert.deepEqual(layoutFor(22), { cols: 3, rows: 8 });
-  assert.deepEqual(layoutFor(24), { cols: 3, rows: 8 });
-  assert.deepEqual(layoutFor(25), { cols: 4, rows: 7 });
-  assert.deepEqual(layoutFor(36), { cols: 4, rows: 9 });
+  assert.deepEqual(layoutFor(26), { cols: 3, rows: 9 });
+  assert.deepEqual(layoutFor(27), { cols: 4, rows: 7 });
+  assert.deepEqual(layoutFor(32), { cols: 4, rows: 8 });
+  assert.deepEqual(layoutFor(48), { cols: 4, rows: 12 });
+  assert.deepEqual(layoutFor(50), { cols: 5, rows: 10 });
   assert.deepEqual(layoutFor(1), { cols: 3, rows: 1 });
 });
 
-test('キャンバスサイズは 1600×900', () => {
-  assert.equal(W, 1600);
-  assert.equal(H, 900);
+test('splitTitle: 【 】で囲んだ部分を gold にする', () => {
+  assert.deepEqual(splitTitle('第24期 雀王戦【A2】リーグ'), [
+    { text: '第24期 雀王戦', gold: false },
+    { text: 'A2', gold: true },
+    { text: 'リーグ', gold: false },
+  ]);
+  assert.deepEqual(splitTitle('【B1】'), [{ text: 'B1', gold: true }]);
+  assert.deepEqual(splitTitle('囲みなし'), [{ text: '囲みなし', gold: false }]);
+  assert.deepEqual(splitTitle(''), []);
+});
+
+test('キャンバスサイズは 1920×1080', () => {
+  assert.equal(W, 1920);
+  assert.equal(H, 1080);
 });

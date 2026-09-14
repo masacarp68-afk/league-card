@@ -3,20 +3,35 @@ import { parseStandings, ParseError } from './parse.js';
 import { renderStandings } from './render.js';
 
 const STORAGE_KEY = 'league-card.settings';
+const LOGO_URL = 'assets/logo.png';
+
+// 背景のテーマ。色ピッカーを直接いじると「カスタム」になる
+const THEMES = [
+  { id: 'navy', label: '星空ネイビー', color: '#1c2f7a' },
+  { id: 'crimson', label: 'えんじ', color: '#8a2333' },
+  { id: 'green', label: '深緑', color: '#1a5c45' },
+  { id: 'purple', label: 'パープル', color: '#4a1f7a' },
+  { id: 'black', label: 'ブラック', color: '#3a3a3a' },
+  { id: 'custom', label: 'カスタム', color: null },
+];
+
 const DEFAULTS = {
-  title: '第○期 日本プロ麻雀協会 ○リーグ',
+  title: '第○期 日本プロ麻雀協会【A○】リーグ',
   session: '第○節',
   totalSessions: 12,
   totalGames: 48,
   promote: 3,
   demote: 4,
-  color: '#7a1f2b',
+  theme: 'navy',
+  color: '#1c2f7a',
+  showGames: true,
 };
 const FIELDS = Object.keys(DEFAULTS);
 
 const $ = id => document.getElementById(id);
 let canvas = null;
 let fontsReady = false;
+let logo = null;
 
 function loadSettings() {
   try {
@@ -34,13 +49,43 @@ function readSettings() {
   const s = {};
   for (const k of FIELDS) {
     const el = $(k);
-    s[k] = el.type === 'number' ? Number(el.value) : el.value;
+    if (el.type === 'checkbox') s[k] = el.checked;
+    else if (el.type === 'number') s[k] = Number(el.value);
+    else s[k] = el.value;
   }
   return s;
 }
 
 function writeSettings(s) {
-  for (const k of FIELDS) $(k).value = s[k];
+  for (const k of FIELDS) {
+    const el = $(k);
+    if (el.type === 'checkbox') el.checked = !!s[k];
+    else el.value = s[k];
+  }
+}
+
+function initThemeSelect() {
+  const sel = $('theme');
+  for (const t of THEMES) {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.label;
+    sel.appendChild(opt);
+  }
+  sel.addEventListener('change', () => {
+    const t = THEMES.find(x => x.id === sel.value);
+    if (t && t.color) $('color').value = t.color;
+    update();
+  });
+  $('color').addEventListener('input', () => { sel.value = 'custom'; });
+}
+
+// ロゴ（assets/logo.png）があれば読み込んで再描画。無ければロゴ無しで描く
+function loadLogo() {
+  const img = new Image();
+  img.onload = () => { logo = img; update(); };
+  img.onerror = () => { logo = null; };
+  img.src = LOGO_URL;
 }
 
 // Google Fonts の読み込みを待つ（失敗してもシステムフォントで描く）
@@ -100,7 +145,7 @@ async function update() {
     return;
   }
   await ensureFonts();
-  canvas = renderStandings(data, settings);
+  canvas = renderStandings(data, settings, { logo });
   $('preview').replaceChildren(canvas);
   setMessage(`${data.players.length}人を読み込みました`, false);
   setButtons(true);
@@ -136,7 +181,9 @@ async function downloadImage() {
 }
 
 function init() {
+  initThemeSelect();
   writeSettings(loadSettings());
+  loadLogo();
   $('paste').addEventListener('input', update);
   for (const k of FIELDS) $(k).addEventListener('input', update);
   $('copy').addEventListener('click', copyImage);
