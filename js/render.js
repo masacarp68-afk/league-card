@@ -1,32 +1,41 @@
 // 順位表を Canvas に描く。X 投稿用に 1920×1080（16:9）
+// 黒に近いフラットな地に、角丸の2行カード（名前／pt）を縦に詰めて並べる
 export const W = 1920, H = 1080;
 const FONT = '"Noto Sans JP", "Yu Gothic", "Hiragino Sans", "Meiryo", sans-serif';
 
-const MARGIN = 50;           // 左右の余白
-const BODY_TOP = 180;        // 選手一覧の上端
-const BODY_BOTTOM = H - 60;  // 選手一覧の下端
-const COL_GAP = 24;
-const ROW_GAP = 10;
-const MAX_ROW_H = 100;
+const MARGIN = 40;           // 左右の余白
+const HEADER_CY = 76;        // ヘッダー（タイトル・バッジ・ロゴ）の中心の高さ
+const HEADER_LINE_Y = 150;   // ヘッダー下の金ライン
+const BODY_TOP = 176;        // 選手一覧の上端
+const BODY_BOTTOM = H - 48;  // 選手一覧の下端
+const COL_GAP = 16;
+const ROW_GAP = 9;
+const MAX_ROWS = 11;         // 縦にこれ以上は詰めず、列を増やす
+const MAX_CARD_H = 104;
+const CARD_RADIUS = 8;
 
 const COLORS = {
   name: '#ffffff',
-  positive: '#5ab0ff',
-  negative: '#ff5a5a',
-  games: 'rgba(255,255,255,0.55)',
-  gold: '#f6c945',
-  session: '#a9c8ff',
-  footer: 'rgba(255,255,255,0.75)',
+  positive: '#6fe3a8',
+  negative: '#ff6b6b',
+  zero: '#b8bccb',
+  games: '#9aa0b4',
+  gold: '#f2c14e',
+  silver: '#d7dfea',
+  bronze: '#e0965f',
+  onMedal: '#1a1408',
+  footer: 'rgba(255,255,255,0.7)',
 };
 
 // ゾーンごとのカードの色。昇級は上位から 金→銀→銅、降級は下位から 赤→薄赤
+// tint はカードの地に重ねる色、border は枠、name は名前の文字色
 const ZONE_STYLE = {
-  up1:   { fill: 'rgba(214,176,52,0.22)',  strip: 'rgba(214,176,52,0.28)',  border: 'rgba(246,201,69,0.8)',   rank: '#f6c945' },
-  up2:   { fill: 'rgba(190,200,215,0.20)', strip: 'rgba(190,200,215,0.26)', border: 'rgba(215,225,240,0.8)',  rank: '#e3eaf4' },
-  up3:   { fill: 'rgba(196,120,70,0.22)',  strip: 'rgba(196,120,70,0.28)',  border: 'rgba(230,150,95,0.8)',   rank: '#eaa877' },
-  stay:  { fill: 'rgba(0,0,0,0.30)',       strip: 'rgba(0,0,0,0.32)',       border: 'rgba(255,255,255,0.28)', rank: '#ffffff' },
-  down2: { fill: 'rgba(170,28,40,0.22)',   strip: 'rgba(120,10,20,0.28)',   border: 'rgba(255,110,110,0.45)', rank: '#ff9a9a' },
-  down1: { fill: 'rgba(170,28,40,0.45)',   strip: 'rgba(120,10,20,0.5)',    border: 'rgba(255,110,110,0.65)', rank: '#ff6b6b' },
+  up1:   { tint: 'rgba(242,193,78,0.22)',  border: 'rgba(242,193,78,0.9)',   name: COLORS.gold },
+  up2:   { tint: 'rgba(215,223,234,0.18)', border: 'rgba(215,223,234,0.85)', name: COLORS.silver },
+  up3:   { tint: 'rgba(224,150,95,0.20)',  border: 'rgba(224,150,95,0.85)',  name: COLORS.bronze },
+  stay:  { tint: null,                      border: null,                      name: COLORS.name },
+  down2: { tint: 'rgba(255,90,90,0.16)',   border: 'rgba(255,110,110,0.5)',  name: COLORS.name },
+  down1: { tint: 'rgba(255,90,90,0.30)',   border: 'rgba(255,110,110,0.8)',  name: COLORS.name },
 };
 
 // 順位からゾーンを判定。ups = 上位からのグループ人数 [金, 銀, 銅]、downs = 下位からのグループ人数 [赤, 薄赤]
@@ -44,15 +53,16 @@ export function zoneOf(rank, playerCount, ups, downs) {
   return 'stay';
 }
 
-// 符号付き小数1桁（+374.9 / ▲14.7 / +0.0）
+// 符号付き小数1桁（+374.9 / ▲14.7 / ±0.0）
 export function fmtPt(v) {
   const s = Math.abs(v).toFixed(1);
-  return v < 0 && s !== '0.0' ? `▲${s}` : `+${s}`;
+  if (s === '0.0') return '±0.0';
+  return v < 0 ? `▲${s}` : `+${s}`;
 }
 
-// 人数から列数・行数を決める
+// 人数から列数・行数を決める。縦は MAX_ROWS 行まで詰め、超えたら列を増やす（最低3列）
 export function layoutFor(n) {
-  const cols = n <= 26 ? 3 : n <= 48 ? 4 : 5;
+  const cols = Math.max(3, Math.ceil(n / MAX_ROWS));
   return { cols, rows: Math.max(1, Math.ceil(n / cols)) };
 }
 
@@ -70,10 +80,36 @@ export function splitTitle(title) {
   return parts;
 }
 
+// 「第25期 日本プロ麻雀協会 後期【E3】リーグ」→ 最後のスペースで、小さく出す前半と大きく出す後半に分ける
+// スペースが無ければ全部を大きく出す
+export function splitTitleSized(title) {
+  const t = String(title || '').trim();
+  const m = /^(.*\S)[ 　]+(\S.*)$/.exec(t);
+  if (!m) return { small: [], large: splitTitle(t) };
+  return { small: splitTitle(m[1]), large: splitTitle(m[2]) };
+}
+
+// フッターの文言。「全12節・48回戦」、節が無ければ「全6回戦」、どちらも無ければ ''
+export function footerText(totalSessions, totalGames) {
+  const sessions = Number(totalSessions) || 0;
+  const games = Number(totalGames) || 0;
+  const parts = [];
+  if (sessions) parts.push(`全${sessions}節`);
+  if (games) parts.push(`${sessions ? '' : '全'}${games}回戦`);
+  return parts.join('・');
+}
+
 function hexToRgb(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
   const v = m ? parseInt(m[1], 16) : 0x1c2f7a;
   return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+// テーマ色から、地色（ほぼ黒）・カード・順位の丸の色を作る
+function palette(hex) {
+  const [r, g, b] = hexToRgb(hex);
+  const mix = (k, add) => `rgb(${Math.round(r * k + add)},${Math.round(g * k + add)},${Math.round(b * k + add)})`;
+  return { bg: mix(0.22, 6), card: mix(0.5, 10), circle: mix(0.55, 28) };
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -103,41 +139,6 @@ function fitFontSize(ctx, text, weight, size, maxWidth, min) {
     ctx.font = `${weight} ${px}px ${FONT}`;
   }
   return px;
-}
-
-// 毎回同じ星空になるように固定シードの乱数
-function mulberry32(seed) {
-  return function () {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function drawStars(ctx) {
-  const rnd = mulberry32(20260914);
-  for (let i = 0; i < 260; i++) {
-    const x = rnd() * W, y = rnd() * H;
-    const r = 0.5 + rnd() * 1.3, a = 0.15 + rnd() * 0.6;
-    ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function drawBackground(ctx, color) {
-  const [r, g, b] = hexToRgb(color);
-  // テーマ色をかなり暗くした地色に、上からテーマ色の光を落とす
-  ctx.fillStyle = `rgb(${Math.round(r * 0.28)},${Math.round(g * 0.28)},${Math.round(b * 0.28)})`;
-  ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W / 2, -H * 0.2, 0, W / 2, -H * 0.2, W * 0.75);
-  glow.addColorStop(0, `rgba(${r},${g},${b},0.85)`);
-  glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, H);
-  drawStars(ctx);
 }
 
 // ロゴ画像の白い余白を除いた範囲（元画像のピクセル座標）。一度計算したら画像に覚えさせる
@@ -170,117 +171,159 @@ function logoContentRect(logo) {
   return rect;
 }
 
-// 右上にロゴを白いプレートに載せて描く。プレートの幅を返す（ロゴ無しなら 0）
-function drawLogo(ctx, logo) {
-  if (!logo || !logo.naturalWidth) return 0;
-  const src = logoContentRect(logo);
-  const plateH = 136, pad = 14;
-  const imgH = plateH - pad * 2;
-  const imgW = imgH * src.w / src.h;
-  const plateW = imgW + pad * 2;
-  const x = W - MARGIN - plateW, y = 22;
-  roundRect(ctx, x, y, plateW, plateH, 14);
+// 右上に白い丸を置いてロゴを収める。丸の左端の x を返す（ロゴ無しなら右余白の位置）
+function drawLogo(ctx, logo, right) {
+  if (!logo || !logo.naturalWidth) return right;
+  const d = 100, pad = 15;
+  const cx = right - d / 2, cy = HEADER_CY;
+  ctx.beginPath();
+  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
-  ctx.drawImage(logo, src.x, src.y, src.w, src.h, x + pad, y + pad, imgW, imgH);
-  return plateW;
+  // 丸に内接する正方形に収める
+  const src = logoContentRect(logo);
+  const box = d - pad * 2;
+  let iw = box, ih = box * src.h / src.w;
+  if (ih > box) { ih = box; iw = box * src.w / src.h; }
+  ctx.drawImage(logo, src.x, src.y, src.w, src.h, cx - iw / 2, cy - ih / 2, iw, ih);
+  return cx - d / 2;
+}
+
+// 「第1節」の金バッジ。バッジの左端の x を返す（節が空なら right のまま）
+function drawSessionBadge(ctx, session, right) {
+  if (!session) return right;
+  ctx.font = `700 30px ${FONT}`;
+  const bw = ctx.measureText(session).width + 44, bh = 52;
+  const bx = right - bw, by = HEADER_CY - bh / 2;
+  roundRect(ctx, bx, by, bw, bh, 8);
+  ctx.fillStyle = COLORS.gold;
+  ctx.fill();
+  ctx.fillStyle = COLORS.onMedal;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(session, bx + bw / 2, HEADER_CY + 1);
+  return bx;
+}
+
+// タイトル：前半を小さく、後半を大きく、【 】は金色で左右に少し間を空ける
+function drawTitle(ctx, title, maxW) {
+  const { small, large } = splitTitleSized(title);
+  let px = 70;
+  const smallPx = () => Math.round(px * 0.66);
+  const gap = () => px * 0.12;
+  const widthOf = (parts, weight, size) => {
+    ctx.font = `${weight} ${size}px ${FONT}`;
+    let w = 0;
+    parts.forEach((p, i) => {
+      w += ctx.measureText(p.text).width;
+      if (p.gold) w += (i > 0 ? gap() : 0) + (i < parts.length - 1 ? gap() : 0);
+    });
+    return w;
+  };
+  const measure = () => {
+    let w = widthOf(large, 900, px);
+    if (small.length) w += widthOf(small, 700, smallPx()) + px * 0.3;
+    return w;
+  };
+  while (px > 30 && measure() > maxW) px -= 2;
+
+  const y = HEADER_CY + px * 0.36;
+  let x = MARGIN;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  const drawParts = (parts, weight, size) => {
+    ctx.font = `${weight} ${size}px ${FONT}`;
+    parts.forEach((p, i) => {
+      if (p.gold && i > 0) x += gap();
+      ctx.fillStyle = p.gold ? COLORS.gold : '#ffffff';
+      ctx.fillText(p.text, x, y);
+      x += ctx.measureText(p.text).width;
+      if (p.gold && i < parts.length - 1) x += gap();
+    });
+  };
+  if (small.length) {
+    drawParts(small, 700, smallPx());
+    x += px * 0.3;
+  }
+  drawParts(large, 900, px);
 }
 
 function drawHeader(ctx, s, logo) {
-  const plateW = drawLogo(ctx, logo);
-  const side = MARGIN + (plateW ? plateW + 30 : 0);
-  const maxW = W - side * 2;
-  const parts = splitTitle(String(s.title || ''));
-  const session = String(s.session || '');
-  // タイトル＋節を1行に収まるサイズにして中央揃え
-  let px = 64;
-  const measure = () => {
-    let w = 0;
-    ctx.font = `900 ${px}px ${FONT}`;
-    for (const p of parts) w += ctx.measureText(p.text).width;
-    if (session) {
-      ctx.font = `700 ${Math.round(px * 0.56)}px ${FONT}`;
-      w += 28 + ctx.measureText(session).width;
-    }
-    return w;
-  };
-  let total = measure();
-  while (px > 28 && total > maxW) { px -= 2; total = measure(); }
-  let x = (W - total) / 2;
-  const y = 100;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.shadowColor = 'rgba(0,0,0,0.5)';
-  ctx.shadowBlur = 10;
-  ctx.font = `900 ${px}px ${FONT}`;
-  for (const p of parts) {
-    ctx.fillStyle = p.gold ? COLORS.gold : '#ffffff';
-    ctx.fillText(p.text, x, y);
-    x += ctx.measureText(p.text).width;
-  }
-  if (session) {
-    ctx.font = `700 ${Math.round(px * 0.56)}px ${FONT}`;
-    ctx.fillStyle = COLORS.session;
-    ctx.fillText(session, x + 28, y);
-  }
-  ctx.shadowBlur = 0;
+  let right = drawLogo(ctx, logo, W - MARGIN);
+  if (right < W - MARGIN) right -= 22;
+  const session = String(s.session || '').trim();
+  const badgeLeft = drawSessionBadge(ctx, session, right);
+  if (badgeLeft < right) right = badgeLeft - 28;
+  drawTitle(ctx, String(s.title || ''), right - MARGIN);
+  // ヘッダー下の金ライン
+  ctx.fillStyle = COLORS.gold;
+  ctx.fillRect(MARGIN, HEADER_LINE_Y, W - MARGIN * 2, 3);
 }
 
-// 1行：順位｜名前 ……… pt 対局数
-function drawPlayerRow(ctx, p, x, y, w, h, zone, opts) {
+// 1枚：(順位の丸)｜名前
+//                 ｜pt 対局数
+function drawCard(ctx, p, x, y, w, h, zone, opts, pal) {
   const st = ZONE_STYLE[zone];
-  const stripW = Math.round(h * 0.55);
-  ctx.fillStyle = st.fill;
-  ctx.fillRect(x, y, w, h);
-  ctx.fillStyle = st.strip;
-  ctx.fillRect(x, y, stripW, h);
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = st.border;
-  ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  roundRect(ctx, x, y, w, h, CARD_RADIUS);
+  ctx.fillStyle = pal.card;
+  ctx.fill();
+  if (st.tint) {
+    ctx.fillStyle = st.tint;
+    ctx.fill();
+  }
+  if (st.border) {
+    roundRect(ctx, x + 1, y + 1, w - 2, h - 2, CARD_RADIUS - 1);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = st.border;
+    ctx.stroke();
+  }
 
-  // 行の高さと列の幅の両方から文字サイズを決める
-  const unit = Math.min(h * 0.36, w / 13);
-  const midY = y + h / 2 + 1;
-  ctx.textBaseline = 'middle';
+  // カードの高さと幅の両方から文字サイズを決める
+  const unit = Math.min(h * 0.33, w / 10.5);
+  const pad = Math.round(unit * 0.5);
 
-  // 順位
+  // 順位の丸（1〜3位は金・銀・銅）
+  const d = Math.round(unit * 1.85);
+  const cx = x + pad + d / 2, cy = y + h / 2;
+  const medal = p.rank === 1 ? COLORS.gold : p.rank === 2 ? COLORS.silver : p.rank === 3 ? COLORS.bronze : null;
+  ctx.beginPath();
+  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2);
+  ctx.fillStyle = medal || pal.circle;
+  ctx.fill();
+  ctx.fillStyle = medal ? COLORS.onMedal : '#ffffff';
   ctx.textAlign = 'center';
-  ctx.fillStyle = st.rank;
-  ctx.font = `700 ${Math.round(unit * 0.8)}px ${FONT}`;
-  ctx.fillText(String(p.rank), x + stripW / 2, midY);
+  ctx.textBaseline = 'middle';
+  fitFontSize(ctx, String(p.rank), 700, Math.round(unit * 0.95), d * 0.8, Math.round(unit * 0.55));
+  ctx.fillText(String(p.rank), cx, cy + 1);
 
-  // 右端から 対局数 → pt の順に詰める
-  const pad = Math.round(unit * 0.4);
-  let right = x + w - pad;
+  // 上段：名前（残った幅に収める。収まらなければ少し小さくしてから…で省略）
+  const tx = x + pad + d + Math.round(unit * 0.45);
+  const tw = x + w - Math.round(pad * 0.8) - tx;
+  const nameY = y + h * 0.34, ptY = y + h * 0.70;
+  ctx.textAlign = 'left';
+  fitFontSize(ctx, p.name, 700, Math.round(unit), tw, Math.round(unit * 0.7));
+  ctx.fillStyle = st.name;
+  ctx.fillText(fitText(ctx, p.name, tw), tx, nameY);
+
+  // 下段：pt と対局数
+  const pt = fmtPt(p.total);
+  ctx.font = `900 ${Math.round(unit)}px ${FONT}`;
+  ctx.fillStyle = pt.startsWith('▲') ? COLORS.negative : pt.startsWith('±') ? COLORS.zero : COLORS.positive;
+  ctx.fillText(pt, tx, ptY);
   if (opts.showGames && p.games !== null && p.games !== undefined) {
     const label = opts.totalGames ? `${p.games}/${opts.totalGames}` : `${p.games}`;
-    ctx.font = `400 ${Math.round(unit * 0.5)}px ${FONT}`;
+    const gx = tx + ctx.measureText(pt).width + Math.round(unit * 0.35);
+    ctx.font = `400 ${Math.round(unit * 0.62)}px ${FONT}`;
     ctx.fillStyle = COLORS.games;
-    ctx.textAlign = 'right';
-    ctx.fillText(label, right, midY + unit * 0.12);
-    right -= ctx.measureText(label).width + Math.round(unit * 0.3);
+    ctx.fillText(label, gx, ptY + unit * 0.12);
   }
-  const pt = fmtPt(p.total);
-  ctx.font = `900 ${Math.round(unit * 0.95)}px ${FONT}`;
-  ctx.fillStyle = pt.startsWith('▲') ? COLORS.negative : COLORS.positive;
-  ctx.textAlign = 'right';
-  ctx.fillText(pt, right, midY);
-  right -= ctx.measureText(pt).width + Math.round(unit * 0.45);
-
-  // 名前（残った幅に収める。収まらなければ少し小さくしてから…で省略）
-  const nameX = x + stripW + Math.round(unit * 0.4);
-  const nameW = right - nameX;
-  fitFontSize(ctx, p.name, 700, Math.round(unit), nameW, Math.round(unit * 0.68));
-  ctx.fillStyle = COLORS.name;
-  ctx.textAlign = 'left';
-  ctx.fillText(fitText(ctx, p.name, nameW), nameX, midY);
 }
 
-function drawPlayers(ctx, players, s) {
+function drawPlayers(ctx, players, s, pal) {
   const n = players.length;
   const { cols, rows } = layoutFor(n);
   const colW = (W - MARGIN * 2 - COL_GAP * (cols - 1)) / cols;
-  const rowH = Math.min(MAX_ROW_H, (BODY_BOTTOM - BODY_TOP - ROW_GAP * (rows - 1)) / rows);
+  const rowH = Math.min(MAX_CARD_H, (BODY_BOTTOM - BODY_TOP - ROW_GAP * (rows - 1)) / rows);
   const opts = {
     totalGames: Number(s.totalGames) || 0,
     showGames: s.showGames !== false,
@@ -288,32 +331,22 @@ function drawPlayers(ctx, players, s) {
   const ups = [s.promote1, s.promote2, s.promote3];
   const downs = [s.demote1, s.demote2];
   players.forEach((p, i) => {
-    // 見本と同じく縦に埋めて次の列へ（1〜8 が左列、9〜16 が次の列…）
+    // 縦に埋めて次の列へ（1〜11 が左列、12〜22 が次の列…）
     const col = Math.floor(i / rows), row = i % rows;
     const x = MARGIN + col * (colW + COL_GAP);
     const y = BODY_TOP + row * (rowH + ROW_GAP);
-    drawPlayerRow(ctx, p, x, y, colW, rowH, zoneOf(p.rank, n, ups, downs), opts);
+    drawCard(ctx, p, x, y, colW, rowH, zoneOf(p.rank, n, ups, downs), opts, pal);
   });
-}
-
-// フッターの文言。「全12節・48回戦」、節が無ければ「全6回戦」、どちらも無ければ ''
-export function footerText(totalSessions, totalGames) {
-  const sessions = Number(totalSessions) || 0;
-  const games = Number(totalGames) || 0;
-  const parts = [];
-  if (sessions) parts.push(`全${sessions}節`);
-  if (games) parts.push(`${sessions ? '' : '全'}${games}回戦`);
-  return parts.join('・');
 }
 
 function drawFooter(ctx, s) {
   const text = footerText(s.totalSessions, s.totalGames);
   if (!text) return;
   ctx.fillStyle = COLORS.footer;
-  ctx.font = `700 24px ${FONT}`;
+  ctx.font = `700 22px ${FONT}`;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(text, W - MARGIN, H - 22);
+  ctx.fillText(text, W - MARGIN, H - 16);
   ctx.textAlign = 'left';
 }
 
@@ -325,9 +358,11 @@ export function renderStandings(data, settings, assets = {}) {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
-  drawBackground(ctx, settings.color);
+  const pal = palette(settings.color);
+  ctx.fillStyle = pal.bg;
+  ctx.fillRect(0, 0, W, H);
   drawHeader(ctx, settings, assets.logo);
-  drawPlayers(ctx, data.players, settings);
+  drawPlayers(ctx, data.players, settings, pal);
   drawFooter(ctx, settings);
   return canvas;
 }

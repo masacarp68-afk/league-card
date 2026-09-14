@@ -8,7 +8,7 @@ const LOGO_URLS = ['assets/logo.webp', 'assets/logo.png', 'assets/logo.jpg'];
 
 // 背景のテーマ。色ピッカーを直接いじると「カスタム」になる
 const THEMES = [
-  { id: 'navy', label: '星空ネイビー', color: '#1c2f7a' },
+  { id: 'navy', label: 'ネイビー', color: '#1c2f7a' },
   { id: 'crimson', label: 'えんじ', color: '#8a2333' },
   { id: 'pink', label: 'ピンク', color: '#ee62aa' },
   { id: 'green', label: '深緑', color: '#1a5c45' },
@@ -24,7 +24,7 @@ const MODES = {
     parse: parseStandings,
     upTitle: '昇級（上位から）',
     downTitle: '降級（下位から）',
-    defaults: { title: '第○期 日本プロ麻雀協会【A○】リーグ', session: '第○節', totalSessions: 12, totalGames: 48, promote1: 3, demote1: 4 },
+    defaults: { title: '第○期 日本プロ麻雀協会 【A○】リーグ', session: '第○節', totalSessions: 12, totalGames: 48, promote1: 3, demote1: 4 },
   },
   jantoryu: {
     storageKey: 'league-card.settings.jantoryu',

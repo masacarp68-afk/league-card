@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneOf, fmtPt, layoutFor, splitTitle, footerText, W, H } from '../js/render.js';
+import { zoneOf, fmtPt, layoutFor, splitTitle, splitTitleSized, footerText, W, H } from '../js/render.js';
 
 test('zoneOf: 上位から金・銀・銅、下位から赤・薄赤、間は stay', () => {
   // 22人：上位1名=金、次2名=銀、次3名=銅／下位4名=赤、その上2名=薄赤
@@ -29,21 +29,20 @@ test('zoneOf: 0 人なら全員 stay', () => {
   assert.equal(zoneOf(10, 10, [0, 0, 0], [0, 0]), 'stay');
 });
 
-test('fmtPt: プラスは +、マイナスは ▲、小数1桁', () => {
+test('fmtPt: プラスは +、マイナスは ▲、0 は ±、小数1桁', () => {
   assert.equal(fmtPt(374.9), '+374.9');
   assert.equal(fmtPt(-14.7), '▲14.7');
-  assert.equal(fmtPt(0), '+0.0');
-  assert.equal(fmtPt(-0.04), '+0.0');
+  assert.equal(fmtPt(0), '±0.0');
+  assert.equal(fmtPt(-0.04), '±0.0');
   assert.equal(fmtPt(12), '+12.0');
 });
 
-test('layoutFor: 26人以下は3列、48人以下は4列、それ以上は5列', () => {
+test('layoutFor: 縦11行まで詰めて、超えたら列を増やす（最低3列）', () => {
   assert.deepEqual(layoutFor(22), { cols: 3, rows: 8 });
-  assert.deepEqual(layoutFor(26), { cols: 3, rows: 9 });
-  assert.deepEqual(layoutFor(27), { cols: 4, rows: 7 });
-  assert.deepEqual(layoutFor(32), { cols: 4, rows: 8 });
-  assert.deepEqual(layoutFor(48), { cols: 4, rows: 12 });
-  assert.deepEqual(layoutFor(50), { cols: 5, rows: 10 });
+  assert.deepEqual(layoutFor(33), { cols: 3, rows: 11 });
+  assert.deepEqual(layoutFor(34), { cols: 4, rows: 9 });
+  assert.deepEqual(layoutFor(48), { cols: 5, rows: 10 });
+  assert.deepEqual(layoutFor(77), { cols: 7, rows: 11 });
   assert.deepEqual(layoutFor(1), { cols: 3, rows: 1 });
 });
 
@@ -69,4 +68,24 @@ test('footerText: 節と回戦、節が無ければ「全○回戦」、両方�
   assert.equal(footerText(12, 0), '全12節');
   assert.equal(footerText(0, 0), '');
   assert.equal(footerText('', ''), '');
+});
+
+test('splitTitleSized: 最後のスペースで小さい部分と大きい部分に分ける', () => {
+  assert.deepEqual(splitTitleSized('第25期 日本プロ麻雀協会 後期【E3】リーグ'), {
+    small: [{ text: '第25期 日本プロ麻雀協会', gold: false }],
+    large: [
+      { text: '後期', gold: false },
+      { text: 'E3', gold: true },
+      { text: 'リーグ', gold: false },
+    ],
+  });
+  // 全角スペースでも分ける
+  assert.deepEqual(splitTitleSized('第24期　雀王戦【A2】リーグ'), {
+    small: [{ text: '第24期', gold: false }],
+    large: [{ text: '雀王戦', gold: false }, { text: 'A2', gold: true }, { text: 'リーグ', gold: false }],
+  });
+  // スペースが無ければ全部大きい部分
+  assert.deepEqual(splitTitleSized('【B1】'), { small: [], large: [{ text: 'B1', gold: true }] });
+  assert.deepEqual(splitTitleSized('  '), { small: [], large: [] });
+  assert.deepEqual(splitTitleSized(''), { small: [], large: [] });
 });
