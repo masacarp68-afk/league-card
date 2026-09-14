@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneOf, fmtPt, layoutFor, splitTitle, W, H } from '../js/render.js';
+import { zoneOf, fmtPt, layoutFor, splitTitle, footerText, W, H } from '../js/render.js';
 
 test('zoneOf: 上位から金・銀・銅、下位から赤・薄赤、間は stay', () => {
   // 22人：上位1名=金、次2名=銀、次3名=銅／下位4名=赤、その上2名=薄赤
@@ -61,4 +61,12 @@ test('splitTitle: 【 】で囲んだ部分を gold にする', () => {
 test('キャンバスサイズは 1920×1080', () => {
   assert.equal(W, 1920);
   assert.equal(H, 1080);
+});
+
+test('footerText: 節と回戦、節が無ければ「全○回戦」、両方無ければ空', () => {
+  assert.equal(footerText(12, 48), '全12節・48回戦');
+  assert.equal(footerText(0, 6), '全6回戦');
+  assert.equal(footerText(12, 0), '全12節');
+  assert.equal(footerText(0, 0), '');
+  assert.equal(footerText('', ''), '');
 });

@@ -296,16 +296,24 @@ function drawPlayers(ctx, players, s) {
   });
 }
 
-function drawFooter(ctx, s) {
+// フッターの文言。「全12節・48回戦」、節が無ければ「全6回戦」、どちらも無ければ ''
+export function footerText(totalSessions, totalGames) {
+  const sessions = Number(totalSessions) || 0;
+  const games = Number(totalGames) || 0;
   const parts = [];
-  if (Number(s.totalSessions)) parts.push(`全${Number(s.totalSessions)}節`);
-  if (Number(s.totalGames)) parts.push(`${Number(s.totalGames)}回戦`);
-  if (parts.length === 0) return;
+  if (sessions) parts.push(`全${sessions}節`);
+  if (games) parts.push(`${sessions ? '' : '全'}${games}回戦`);
+  return parts.join('・');
+}
+
+function drawFooter(ctx, s) {
+  const text = footerText(s.totalSessions, s.totalGames);
+  if (!text) return;
   ctx.fillStyle = COLORS.footer;
   ctx.font = `700 24px ${FONT}`;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(parts.join('・'), W - MARGIN, H - 22);
+  ctx.fillText(text, W - MARGIN, H - 22);
   ctx.textAlign = 'left';
 }
 
