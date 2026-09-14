@@ -132,11 +132,11 @@ function drawBackground(ctx, color) {
 // 右上にロゴを白いプレートに載せて描く。プレートの幅を返す（ロゴ無しなら 0）
 function drawLogo(ctx, logo) {
   if (!logo || !logo.naturalWidth) return 0;
-  const plateH = 104, pad = 10;
+  const plateH = 124, pad = 10;
   const imgH = plateH - pad * 2;
   const imgW = imgH * logo.naturalWidth / logo.naturalHeight;
   const plateW = imgW + pad * 2;
-  const x = W - MARGIN - plateW, y = 30;
+  const x = W - MARGIN - plateW, y = 26;
   roundRect(ctx, x, y, plateW, plateH, 14);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
