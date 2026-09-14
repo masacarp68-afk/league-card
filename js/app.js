@@ -10,6 +10,7 @@ const LOGO_URLS = ['assets/logo.webp', 'assets/logo.png', 'assets/logo.jpg'];
 const THEMES = [
   { id: 'navy', label: '星空ネイビー', color: '#1c2f7a' },
   { id: 'crimson', label: 'えんじ', color: '#8a2333' },
+  { id: 'pink', label: 'ピンク', color: '#ee62aa' },
   { id: 'green', label: '深緑', color: '#1a5c45' },
   { id: 'purple', label: 'パープル', color: '#4a1f7a' },
   { id: 'black', label: 'ブラック', color: '#3a3a3a' },
