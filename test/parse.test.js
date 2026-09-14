@@ -77,3 +77,16 @@ test('parseNumber: カンマ・符号・全角・▲', () => {
   assert.ok(Number.isNaN(parseNumber('abc')));
   assert.ok(Number.isNaN(parseNumber(undefined)));
 });
+
+test('parseStandings: 見出し行の上に余計な行があっても読める', () => {
+  const text = [
+    '\t\t①\t②',
+    '順位\t登録名\tトータル\t対局数',
+    '1\t宇野 公介\t374.9\t32',
+    '2\t中野 妃彩\t250.2\t32',
+  ].join('\n');
+  const { players } = parseStandings(text);
+  assert.equal(players.length, 2);
+  assert.equal(players[0].name, '宇野 公介');
+  assert.equal(players[0].rank, 1);
+});

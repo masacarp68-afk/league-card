@@ -37,15 +37,26 @@ function findColumns(header) {
   return cols;
 }
 
+// 必須の見出しが揃った行を先頭の数行から探す。無ければ -1
+// （見出しの上に①〜⑥のような行が混ざっていても読めるように）
+function findHeaderRow(rows, requiredPatterns) {
+  const limit = Math.min(rows.length, 5);
+  for (let i = 0; i < limit; i++) {
+    if (requiredPatterns.every(re => rows[i].some(h => re.test(h)))) return i;
+  }
+  return -1;
+}
+
 export function parseStandings(text) {
   const rows = splitRows(text);
   if (rows.length === 0) throw new ParseError('貼り付け内容が空です');
-  const cols = findColumns(rows[0]);
-  if (cols.name === undefined || cols.total === undefined) {
+  const hi = findHeaderRow(rows, [HEADER_PATTERNS.name, HEADER_PATTERNS.total]);
+  if (hi < 0) {
     throw new ParseError('「登録名」「トータル」の見出しが見つかりません。見出し行を含めてコピーしてください');
   }
+  const cols = findColumns(rows[hi]);
   const players = [];
-  for (const row of rows.slice(1)) {
+  for (const row of rows.slice(hi + 1)) {
     const name = row[cols.name] || '';
     const total = parseNumber(row[cols.total]);
     if (!name || Number.isNaN(total)) continue;
