@@ -9,6 +9,9 @@ const HEADER_PATTERNS = {
 // 雀竜位戦：ポイント列（各回戦の「合計点」は除外）と、各回戦の得失点列
 const JANTORYU_TOTAL_RE = /ポイント|トータル|累計|合計(?!点)/;
 const SCORE_RE = /得失点/;
+// フレッシュスターカップ：入会期列と、各回戦（1回戦〜決勝）の列
+const PERIOD_RE = /入会期|期生|入会/;
+const ROUND_RE = /回戦|準決勝|決勝/;
 
 export class ParseError extends Error {}
 
@@ -113,4 +116,41 @@ export function parseJantoryu(text) {
   }
   if (players.length === 0) throw new ParseError('選手の行が見つかりません');
   return { players: rankByTotal(players) };
+}
+
+// フレッシュスターカップのシート：順位／氏名／入会期／合計 のあとに 1回戦〜決勝 が並ぶ
+// 順位はシートの列をそのまま使う（決勝の結果順なので並べ替えない。無ければ貼った順）
+// 対局数 = 回戦の列に数値が入っている数。入会期は文字のまま持つ
+export function parseFreshStar(text) {
+  const rows = splitRows(text);
+  if (rows.length === 0) throw new ParseError('貼り付け内容が空です');
+  const hi = findHeaderRow(rows, [NAME_RE, JANTORYU_TOTAL_RE]);
+  if (hi < 0) {
+    throw new ParseError('「氏名」「合計」の見出しが見つかりません。見出し行を含めてコピーしてください');
+  }
+  const header = rows[hi];
+  const nameCol = header.findIndex(h => NAME_RE.test(h));
+  const totalCol = header.findIndex(h => JANTORYU_TOTAL_RE.test(h));
+  const rankCol = header.findIndex(h => HEADER_PATTERNS.rank.test(h));
+  const periodCol = header.findIndex(h => PERIOD_RE.test(h));
+  const roundCols = header.map((h, i) => (ROUND_RE.test(h) ? i : -1)).filter(i => i >= 0);
+  const players = [];
+  for (const row of rows.slice(hi + 1)) {
+    const name = row[nameCol] || '';
+    const total = parseNumber(row[totalCol]);
+    if (!name || Number.isNaN(total)) continue;
+    const rank = rankCol < 0 ? NaN : parseNumber(row[rankCol]);
+    const games = roundCols.length === 0
+      ? null
+      : roundCols.filter(i => !Number.isNaN(parseNumber(row[i]))).length;
+    players.push({
+      rank: Number.isNaN(rank) ? players.length + 1 : rank,
+      name,
+      total,
+      games,
+      period: periodCol < 0 ? '' : (row[periodCol] || ''),
+    });
+  }
+  if (players.length === 0) throw new ParseError('選手の行が見つかりません');
+  return { players };
 }

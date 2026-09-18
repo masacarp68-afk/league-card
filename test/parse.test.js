@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseStandings, parseNumber, parseJantoryu, ParseError } from '../js/parse.js';
+import { parseStandings, parseNumber, parseJantoryu, parseFreshStar, ParseError } from '../js/parse.js';
 
 const SAMPLE = [
   '順位\t組\t登録名\tトータル\t対局数',
@@ -141,4 +141,38 @@ test('parseJantoryu: 必須列が無ければ ParseError', () => {
   assert.throws(() => parseJantoryu(''), ParseError);
   assert.throws(() => parseJantoryu('順位\t名前\n1\tA'), ParseError);
   assert.throws(() => parseJantoryu('登録名\tポイント\n\t'), ParseError);
+});
+
+// 見本（フレッシュスターカップのシート）。順位／氏名／入会期／合計 のあとに 1回戦〜決勝
+// 順位はシートの列をそのまま使う（決勝の結果順。合計順ではない）
+const FRESHSTAR_SAMPLE = [
+  '順位\t氏名\t入会期\t合計\t1回戦\t2回戦\t3回戦\t準決勝\t決勝',
+  '1\t結宮れちょ\t6期生\t252.6\t53.1\t58.7\t90.5\t-20.3\t70.6',
+  '4\t鹿海なべ子\t7期生\t61.1\t66.0\t-16.6\t13.9\t55.6\t-62.7',
+  '5\tトラミナ\t6期生\t122.0\t3.0\t3.0\t92.2\t-\t-',
+  '16\t大和ちとせ\t5期生\t-35.1\t-55.9\t-42.5\t8.2\t―\t―',
+].join('\n');
+
+test('parseFreshStar: 順位はシートの列のまま、入会期を読み、回戦の数を対局数にする', () => {
+  const { players } = parseFreshStar(FRESHSTAR_SAMPLE);
+  assert.deepEqual(players, [
+    { rank: 1, name: '結宮れちょ', total: 252.6, games: 5, period: '6期生' },
+    { rank: 4, name: '鹿海なべ子', total: 61.1, games: 5, period: '7期生' },
+    { rank: 5, name: 'トラミナ', total: 122.0, games: 3, period: '6期生' },
+    { rank: 16, name: '大和ちとせ', total: -35.1, games: 3, period: '5期生' },
+  ]);
+});
+
+test('parseFreshStar: 順位列が無ければ貼った順、入会期・回戦が無ければ空と null', () => {
+  const { players } = parseFreshStar('氏名\t合計\nA\t10\nB\t20');
+  assert.deepEqual(players, [
+    { rank: 1, name: 'A', total: 10, games: null, period: '' },
+    { rank: 2, name: 'B', total: 20, games: null, period: '' },
+  ]);
+});
+
+test('parseFreshStar: 必須列が無ければ ParseError', () => {
+  assert.throws(() => parseFreshStar(''), ParseError);
+  assert.throws(() => parseFreshStar('順位\t入会期\n1\t6期生'), ParseError);
+  assert.throws(() => parseFreshStar('氏名\t合計\n\t'), ParseError);
 });
