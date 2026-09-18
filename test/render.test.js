@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneOf, fmtPt, layoutFor, splitTitle, splitTitleSized, footerText, W, H } from '../js/render.js';
+import { zoneOf, fmtPt, layoutFor, cardLayout, splitTitle, splitTitleSized, footerText, W, H } from '../js/render.js';
 
 test('zoneOf: 上位から金・銀・銅、下位から赤・薄赤、間は stay', () => {
   // 22人：上位1名=金、次2名=銀、次3名=銅／下位4名=赤、その上2名=薄赤
@@ -88,4 +88,12 @@ test('splitTitleSized: 最後のスペースで小さい部分と大きい部分
   assert.deepEqual(splitTitleSized('【B1】'), { small: [], large: [{ text: 'B1', gold: true }] });
   assert.deepEqual(splitTitleSized('  '), { small: [], large: [] });
   assert.deepEqual(splitTitleSized(''), { small: [], large: [] });
+});
+
+test('cardLayout: 横長のカード（幅÷高さ ≥ 5.5）は1行組み、それ以外は2行組み', () => {
+  assert.equal(cardLayout(602, 70), 'row');    // 3列×11行
+  assert.equal(cardLayout(602, 104), 'row');   // 3列×6行
+  assert.equal(cardLayout(448, 87), 'stack');  // 4列×9行
+  assert.equal(cardLayout(355, 78), 'stack');  // 5列×10行
+  assert.equal(cardLayout(249, 70), 'stack');  // 7列×11行
 });
