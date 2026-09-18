@@ -1,5 +1,5 @@
 // 画面の配線：貼り付け → パース → 描画、設定の保存、コピー／ダウンロード
-import { parseStandings, parseJantoryu, ParseError } from './parse.js';
+import { parseStandings, parseJantoryu, parseFreshStar, ParseError } from './parse.js';
 import { renderStandings } from './render.js';
 
 const MODE_KEY = 'league-card.mode';
@@ -17,11 +17,12 @@ const THEMES = [
   { id: 'custom', label: 'カスタム', color: null },
 ];
 
-// リーグ戦／雀竜位戦。設定はモードごとに別のキーに保存する（リーグ戦は旧来のキーのまま）
+// リーグ戦／雀竜位戦／フレッシュスターカップ。設定とロゴはモードごと（リーグ戦の設定キーは旧来のまま）
 const MODES = {
   league: {
     storageKey: 'league-card.settings',
     parse: parseStandings,
+    logoUrls: LOGO_URLS,
     upTitle: '昇級（上位から）',
     downTitle: '降級（下位から）',
     defaults: { title: '第○期 日本プロ麻雀協会 【A○】リーグ', session: '第○節', totalSessions: 12, totalGames: 48, promote1: 3, demote1: 4 },
@@ -29,9 +30,18 @@ const MODES = {
   jantoryu: {
     storageKey: 'league-card.settings.jantoryu',
     parse: parseJantoryu,
+    logoUrls: LOGO_URLS,
     upTitle: '通過（上位から）',
     downTitle: '敗退（下位から）',
     defaults: { title: '第○期 雀竜位戦【○次予選】', session: '○回戦終了時', totalSessions: 0, totalGames: 6, promote1: 4, demote1: 4 },
+  },
+  freshstar: {
+    storageKey: 'league-card.settings.freshstar',
+    parse: parseFreshStar,
+    logoUrls: ['assets/logo-freshstar.png'],
+    upTitle: '入賞（上位から）',
+    downTitle: '下位（下位から）',
+    defaults: { title: '第○回 フレッシュスターカップ', session: '最終結果', totalSessions: 0, totalGames: 5, promote1: 1, promote2: 1, promote3: 1, demote1: 0 },
   },
 };
 // モード共通の初期値
@@ -42,7 +52,8 @@ const $ = id => document.getElementById(id);
 let mode = 'league';
 let canvas = null;
 let fontsReady = false;
-let logo = null;
+// モードごとのロゴ画像。undefined = 未読み込み、null = 無し
+const logos = {};
 
 function loadMode() {
   try {
@@ -105,6 +116,7 @@ function switchMode(m) {
   saveMode(mode);
   writeSettings(loadSettings(mode));
   applyModeUI();
+  loadLogo(mode);
   update();
 }
 
@@ -124,13 +136,19 @@ function initThemeSelect() {
   $('color').addEventListener('input', () => { sel.value = 'custom'; });
 }
 
-// ロゴがあれば読み込んで再描画。どれも無ければロゴ無しで描く
-function loadLogo(i = 0) {
-  if (i >= LOGO_URLS.length) { logo = null; return; }
-  const img = new Image();
-  img.onload = () => { logo = img; update(); };
-  img.onerror = () => loadLogo(i + 1);
-  img.src = LOGO_URLS[i];
+// そのモードのロゴを読み込んで再描画。候補のどれも無ければロゴ無しで描く（一度読んだら使い回す）
+function loadLogo(m) {
+  if (m in logos) return;
+  logos[m] = null; // 読み込み中はロゴ無しで描く
+  const urls = MODES[m].logoUrls;
+  const tryAt = i => {
+    if (i >= urls.length) return;
+    const img = new Image();
+    img.onload = () => { logos[m] = img; if (m === mode) update(); };
+    img.onerror = () => tryAt(i + 1);
+    img.src = urls[i];
+  };
+  tryAt(0);
 }
 
 // Google Fonts の読み込みを待つ（失敗してもシステムフォントで描く）
@@ -190,7 +208,7 @@ async function update() {
     return;
   }
   await ensureFonts();
-  canvas = renderStandings(data, settings, { logo });
+  canvas = renderStandings(data, settings, { logo: logos[mode] || null });
   $('preview').replaceChildren(canvas);
   setMessage(`${data.players.length}人を読み込みました`, false);
   setButtons(true);
@@ -230,7 +248,7 @@ function init() {
   mode = loadMode();
   writeSettings(loadSettings(mode));
   applyModeUI();
-  loadLogo();
+  loadLogo(mode);
   $('paste').addEventListener('input', update);
   for (const k of FIELDS) $(k).addEventListener('input', update);
   for (const r of document.querySelectorAll('input[name="mode"]')) {

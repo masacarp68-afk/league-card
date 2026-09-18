@@ -171,22 +171,33 @@ function logoContentRect(logo) {
   return rect;
 }
 
-// 右上に白い丸を置いてロゴを収める。丸の左端の x を返す（ロゴ無しなら右余白の位置）
+// 右上に白いプレートを置いてロゴを収める。プレートの左端の x を返す（ロゴ無しなら右余白の位置）
+// ほぼ正方形のロゴは丸に、横長のロゴは角丸の横長プレートに載せる
 function drawLogo(ctx, logo, right) {
   if (!logo || !logo.naturalWidth) return right;
-  const d = 100, pad = 15;
-  const cx = right - d / 2, cy = HEADER_CY;
-  ctx.beginPath();
-  ctx.arc(cx, cy, d / 2, 0, Math.PI * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  // 丸に内接する正方形に収める
   const src = logoContentRect(logo);
-  const box = d - pad * 2;
-  let iw = box, ih = box * src.h / src.w;
-  if (ih > box) { ih = box; iw = box * src.w / src.h; }
-  ctx.drawImage(logo, src.x, src.y, src.w, src.h, cx - iw / 2, cy - ih / 2, iw, ih);
-  return cx - d / 2;
+  const d = 100, cy = HEADER_CY;
+  const aspect = src.w / src.h;
+  ctx.fillStyle = '#ffffff';
+  if (aspect <= 1.25) {
+    const pad = 15, cx = right - d / 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, d / 2, 0, Math.PI * 2);
+    ctx.fill();
+    // 丸に内接する正方形に収める
+    const box = d - pad * 2;
+    let iw = box, ih = box * src.h / src.w;
+    if (ih > box) { ih = box; iw = box * src.w / src.h; }
+    ctx.drawImage(logo, src.x, src.y, src.w, src.h, cx - iw / 2, cy - ih / 2, iw, ih);
+    return cx - d / 2;
+  }
+  const pad = 10;
+  const ih = d - pad * 2, iw = ih * aspect;
+  const pw = iw + pad * 2, px = right - pw;
+  roundRect(ctx, px, cy - d / 2, pw, d, 12);
+  ctx.fill();
+  ctx.drawImage(logo, src.x, src.y, src.w, src.h, px + pad, cy - ih / 2, iw, ih);
+  return px;
 }
 
 // 「第1節」の金バッジ。バッジの左端の x を返す（節が空なら right のまま）
@@ -296,14 +307,27 @@ function drawCard(ctx, p, x, y, w, h, zone, opts, pal) {
   fitFontSize(ctx, String(p.rank), 700, Math.round(unit * 0.95), d * 0.8, Math.round(unit * 0.55));
   ctx.fillText(String(p.rank), cx, cy + 1);
 
-  // 上段：名前（残った幅に収める。収まらなければ少し小さくしてから…で省略）
+  // 上段：名前（残った幅に収める。収まらなければ少し小さくしてから…で省略）。入会期があれば右に小さく
   const tx = x + pad + d + Math.round(unit * 0.45);
   const tw = x + w - Math.round(pad * 0.8) - tx;
   const nameY = y + h * 0.34, ptY = y + h * 0.70;
   ctx.textAlign = 'left';
-  fitFontSize(ctx, p.name, 700, Math.round(unit), tw, Math.round(unit * 0.7));
+  const period = String(p.period || '');
+  let periodW = 0;
+  if (period) {
+    ctx.font = `400 ${Math.round(unit * 0.62)}px ${FONT}`;
+    periodW = ctx.measureText(period).width + Math.round(unit * 0.35);
+  }
+  fitFontSize(ctx, p.name, 700, Math.round(unit), tw - periodW, Math.round(unit * 0.7));
   ctx.fillStyle = st.name;
-  ctx.fillText(fitText(ctx, p.name, tw), tx, nameY);
+  const name = fitText(ctx, p.name, tw - periodW);
+  ctx.fillText(name, tx, nameY);
+  if (period) {
+    const px = tx + ctx.measureText(name).width + Math.round(unit * 0.35);
+    ctx.font = `400 ${Math.round(unit * 0.62)}px ${FONT}`;
+    ctx.fillStyle = COLORS.games;
+    ctx.fillText(period, px, nameY + unit * 0.1);
+  }
 
   // 下段：pt と対局数
   const pt = fmtPt(p.total);
@@ -350,7 +374,7 @@ function drawFooter(ctx, s) {
   ctx.textAlign = 'left';
 }
 
-// data: { players: [{ rank, name, total, games }] }
+// data: { players: [{ rank, name, total, games, period? }] }
 // settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames }
 // assets: { logo: HTMLImageElement | null }
 export function renderStandings(data, settings, assets = {}) {
