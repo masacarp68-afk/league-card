@@ -291,11 +291,13 @@ function drawRankCircle(ctx, rank, cx, cy, d, pal) {
 }
 
 // 名前を幅に収めて描き、続けて入会期を小さく描く（入会期が無ければ名前だけ）
-function drawNameAndPeriod(ctx, p, x, y, maxW, unit, color) {
+// periodScale は入会期の文字サイズ（名前に対する倍率）
+function drawNameAndPeriod(ctx, p, x, y, maxW, unit, color, periodScale) {
   const period = String(p.period || '');
+  const periodFont = `400 ${Math.round(unit * periodScale)}px ${FONT}`;
   let periodW = 0;
   if (period) {
-    ctx.font = `400 ${Math.round(unit * 0.62)}px ${FONT}`;
+    ctx.font = periodFont;
     periodW = ctx.measureText(period).width + Math.round(unit * 0.35);
   }
   ctx.textAlign = 'left';
@@ -305,9 +307,10 @@ function drawNameAndPeriod(ctx, p, x, y, maxW, unit, color) {
   ctx.fillText(name, x, y);
   if (period) {
     const px = x + ctx.measureText(name).width + Math.round(unit * 0.35);
-    ctx.font = `400 ${Math.round(unit * 0.62)}px ${FONT}`;
+    ctx.font = periodFont;
     ctx.fillStyle = COLORS.games;
-    ctx.fillText(period, px, y + unit * 0.1);
+    // 小さい文字ほど少し下げて、名前と下端をそろえる
+    ctx.fillText(period, px, y + unit * (1 - periodScale) * 0.25);
   }
 }
 
@@ -332,7 +335,7 @@ function drawCardStack(ctx, p, x, y, w, h, st, opts, pal) {
   const tw = x + w - Math.round(pad * 0.8) - tx;
   const nameY = y + h * 0.34, ptY = y + h * 0.70;
   ctx.textBaseline = 'middle';
-  drawNameAndPeriod(ctx, p, tx, nameY, tw, unit, st.name);
+  drawNameAndPeriod(ctx, p, tx, nameY, tw, unit, st.name, 0.8);
 
   const pt = fmtPt(p.total);
   ctx.textAlign = 'left';
@@ -375,7 +378,7 @@ function drawCardRow(ctx, p, x, y, w, h, st, opts, pal) {
 
   // 残った幅に名前と入会期
   const nameX = x + pad + d + Math.round(unit * 0.4);
-  drawNameAndPeriod(ctx, p, nameX, midY, right - nameX, unit, st.name);
+  drawNameAndPeriod(ctx, p, nameX, midY, right - nameX, unit, st.name, 0.62);
 }
 
 // 1枚のカード：地と枠を描いてから、横長なら1行組み、そうでなければ2行組み
