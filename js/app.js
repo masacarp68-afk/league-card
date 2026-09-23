@@ -45,8 +45,8 @@ const MODES = {
   },
 };
 // モード共通の初期値
-const COMMON_DEFAULTS = { promote2: 0, promote3: 0, demote2: 0, theme: 'navy', color: '#1c2f7a', showGames: true, medals: false, credit: '高良成績ジェネレーター' };
-const FIELDS = ['title', 'session', 'totalSessions', 'totalGames', 'promote1', 'promote2', 'promote3', 'demote1', 'demote2', 'theme', 'color', 'showGames', 'medals', 'credit'];
+const COMMON_DEFAULTS = { promote2: 0, promote3: 0, demote2: 0, theme: 'navy', color: '#1c2f7a', showGames: true, showLatest: true, medals: false, credit: '高良成績ジェネレーター' };
+const FIELDS = ['title', 'session', 'totalSessions', 'totalGames', 'promote1', 'promote2', 'promote3', 'demote1', 'demote2', 'theme', 'color', 'showGames', 'showLatest', 'medals', 'credit'];
 
 const $ = id => document.getElementById(id);
 let mode = 'league';

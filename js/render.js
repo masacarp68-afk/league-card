@@ -333,9 +333,58 @@ function ptColor(pt) {
   return pt.startsWith('▲') ? COLORS.negative : pt.startsWith('±') ? COLORS.zero : COLORS.positive;
 }
 
+// 今節の成績「(+58.3)」。今節が無い・表示しない設定なら ''
+function latestLabel(p, opts) {
+  if (!opts.showLatest || p.latest === null || p.latest === undefined) return '';
+  return `(${fmtPt(p.latest)})`;
+}
+
 function gamesLabel(p, opts) {
   if (!opts.showGames || p.games === null || p.games === undefined) return '';
   return opts.totalGames ? `${p.games}/${opts.totalGames}` : `${p.games}`;
+}
+
+// 「pt (今節) 対局数」の1行を maxW に収める組み方を決める（入りきらなければ3つとも小さくする）
+function fitPtLine(ctx, pt, latest, label, maxW, unit) {
+  const min = Math.round(unit * 0.6);
+  for (let px = Math.round(unit); ; px -= 1) {
+    const latestPx = Math.round(px * 0.7), gamesPx = Math.round(px * 0.62);
+    const gap = Math.round(px * 0.28);
+    ctx.font = `900 ${px}px ${FONT}`;
+    const ptW = ctx.measureText(pt).width;
+    let latestW = 0;
+    if (latest) {
+      ctx.font = `700 ${latestPx}px ${FONT}`;
+      latestW = ctx.measureText(latest).width + gap;
+    }
+    let labelW = 0;
+    if (label) {
+      ctx.font = `400 ${gamesPx}px ${FONT}`;
+      labelW = ctx.measureText(label).width + gap;
+    }
+    const line = { pt, latest, label, px, latestPx, gamesPx, gap, ptW, latestW, labelW, width: ptW + latestW + labelW };
+    if (line.width <= maxW || px <= min) return line;
+  }
+}
+
+// fitPtLine で決めた1行を x から描く
+function drawPtLine(ctx, line, x, y, p) {
+  ctx.textAlign = 'left';
+  ctx.font = `900 ${line.px}px ${FONT}`;
+  ctx.fillStyle = ptColor(line.pt);
+  ctx.fillText(line.pt, x, y);
+  let px = x + line.ptW + line.gap;
+  if (line.latest) {
+    ctx.font = `700 ${line.latestPx}px ${FONT}`;
+    ctx.fillStyle = ptColor(fmtPt(p.latest));
+    ctx.fillText(line.latest, px, y + line.px * 0.08);
+    px += line.latestW;
+  }
+  if (line.label) {
+    ctx.font = `400 ${line.gamesPx}px ${FONT}`;
+    ctx.fillStyle = COLORS.games;
+    ctx.fillText(line.label, px, y + line.px * 0.12);
+  }
 }
 
 // 2行組み：(順位の丸)｜  名前 入会期
@@ -354,61 +403,33 @@ function drawCardStack(ctx, p, x, y, w, h, st, opts, pal, medals) {
   // 2行とも幅を先に測ってから、空いた分だけ右にずらして中央に置く
   const nl = layoutNameAndPeriod(ctx, p, tw, unit, 0.8);
   const pt = fmtPt(p.total);
-  const ptFont = `900 ${Math.round(unit)}px ${FONT}`;
-  const gamesFont = `400 ${Math.round(unit * 0.62)}px ${FONT}`;
-  const gamesGap = Math.round(unit * 0.35);
   const label = gamesLabel(p, opts);
-  ctx.font = ptFont;
-  const ptW = ctx.measureText(pt).width;
-  let labelW = 0;
-  if (label) {
-    ctx.font = gamesFont;
-    labelW = ctx.measureText(label).width + gamesGap;
-  }
+  const latest = latestLabel(p, opts);
+  const line = fitPtLine(ctx, pt, latest, label, tw, unit);
   const centered = lineW => tx + Math.max(0, (tw - lineW) / 2);
 
   drawNameAndPeriod(ctx, nl, centered(nl.width), nameY, unit, st.name);
-
-  const px = centered(ptW + labelW);
-  ctx.textAlign = 'left';
-  ctx.font = ptFont;
-  ctx.fillStyle = ptColor(pt);
-  ctx.fillText(pt, px, ptY);
-  if (label) {
-    ctx.font = gamesFont;
-    ctx.fillStyle = COLORS.games;
-    ctx.fillText(label, px + ptW + gamesGap, ptY + unit * 0.12);
-  }
+  drawPtLine(ctx, line, centered(line.width), ptY, p);
 }
 
 // 1行組み：(順位の丸)｜名前 入会期 ……… pt 対局数
 function drawCardRow(ctx, p, x, y, w, h, st, opts, pal, medals) {
-  const unit = Math.min(h * 0.56, w / 13);
+  const label = gamesLabel(p, opts);
+  const latest = latestLabel(p, opts);
+  // 今節を出すと数字が増えるので、そのぶん全体を小さくして名前の幅を残す
+  const unit = Math.min(h * 0.56, w / (latest ? 17 : 13));
   const pad = Math.round(unit * 0.35);
   const d = Math.round(h * 0.72);
   const midY = y + h / 2 + 1;
   drawRankCircle(ctx, p.rank, x + pad + d / 2, y + h / 2, d, pal, medals);
 
-  // 右端から 対局数 → pt の順に詰める
+  // 右端に pt・今節・対局数、残った幅に名前と入会期
   ctx.textBaseline = 'middle';
-  ctx.textAlign = 'right';
-  let right = x + w - pad;
-  const label = gamesLabel(p, opts);
-  if (label) {
-    ctx.font = `400 ${Math.round(unit * 0.6)}px ${FONT}`;
-    ctx.fillStyle = COLORS.games;
-    ctx.fillText(label, right, midY + unit * 0.1);
-    right -= ctx.measureText(label).width + Math.round(unit * 0.3);
-  }
   const pt = fmtPt(p.total);
-  ctx.font = `900 ${Math.round(unit)}px ${FONT}`;
-  ctx.fillStyle = ptColor(pt);
-  ctx.fillText(pt, right, midY);
-  right -= ctx.measureText(pt).width + Math.round(unit * 0.5);
-
-  // 残った幅に名前と入会期
   const nameX = x + pad + d + Math.round(unit * 0.4);
-  drawNameAndPeriod(ctx, layoutNameAndPeriod(ctx, p, right - nameX, unit, 0.62), nameX, midY, unit, st.name);
+  const line = fitPtLine(ctx, pt, latest, label, x + w - pad - nameX, unit);
+  drawPtLine(ctx, line, x + w - pad - line.width, midY, p);
+  drawNameAndPeriod(ctx, layoutNameAndPeriod(ctx, p, x + w - pad - line.width - Math.round(unit * 0.5) - nameX, unit, 0.62), nameX, midY, unit, st.name);
 }
 
 // 1枚のカード：地と枠を描いてから、横長なら1行組み、そうでなければ2行組み
@@ -439,6 +460,7 @@ function drawPlayers(ctx, players, s, pal) {
   const opts = {
     totalGames: Number(s.totalGames) || 0,
     showGames: s.showGames !== false,
+    showLatest: s.showLatest !== false,
   };
   const ups = [s.promote1, s.promote2, s.promote3];
   const downs = [s.demote1, s.demote2];
@@ -473,8 +495,8 @@ function drawFooter(ctx, s) {
   ctx.textAlign = 'left';
 }
 
-// data: { players: [{ rank, name, total, games, period? }] }
-// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames, medals, credit }
+// data: { players: [{ rank, name, total, games, latest?, period? }] }
+// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames, showLatest, medals, credit }
 // assets: { logo: HTMLImageElement | null }
 export function renderStandings(data, settings, assets = {}) {
   const canvas = document.createElement('canvas');

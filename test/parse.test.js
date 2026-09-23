@@ -11,15 +11,15 @@ const SAMPLE = [
 test('見出しから列を判定して選手を読む', () => {
   const { players } = parseStandings(SAMPLE);
   assert.deepEqual(players, [
-    { rank: 1, name: '山田 太郎', total: 333.3, games: 20 },
-    { rank: 2, name: '佐藤 花子', total: -26.3, games: 13 },
+    { rank: 1, name: '山田 太郎', total: 333.3, games: 20, latest: null },
+    { rank: 2, name: '佐藤 花子', total: -26.3, games: 13, latest: null },
   ]);
 });
 
 test('見出しの揺れ（選手名・合計・試合数）でも読める', () => {
   const text = '選手名\t合計\t試合数\n鈴木\t10.5\t4';
   const { players } = parseStandings(text);
-  assert.deepEqual(players, [{ rank: 1, name: '鈴木', total: 10.5, games: 4 }]);
+  assert.deepEqual(players, [{ rank: 1, name: '鈴木', total: 10.5, games: 4, latest: null }]);
 });
 
 test('順位列が無ければ貼った順に採番する', () => {
@@ -175,4 +175,32 @@ test('parseFreshStar: 必須列が無ければ ParseError', () => {
   assert.throws(() => parseFreshStar(''), ParseError);
   assert.throws(() => parseFreshStar('順位\t入会期\n1\t6期生'), ParseError);
   assert.throws(() => parseFreshStar('氏名\t合計\n\t'), ParseError);
+});
+
+// 今節（節の列のうち、数字が入っている一番右の列）
+const SETSU = [
+  '順位\t組\t登録名\tトータル\t対局数\t第1節\t回\t第2節\t回\t第3節\t回',
+  '1\tD\t山田 太郎\t333.3\t8\t120.5\t4\t212.8\t4\t\t',
+  '2\tA\t佐藤 花子\t-26.3\t4\t-26.3\t4\t\t\t\t',
+].join('\n');
+
+test('今節：数字が入っている一番右の節の列を latest に入れる', () => {
+  const { players } = parseStandings(SETSU);
+  assert.equal(players[0].latest, 212.8);
+  // 第2節を打っていない人は今節なし
+  assert.equal(players[1].latest, null);
+});
+
+test('今節：節の列が無ければ latest は null', () => {
+  const { players } = parseStandings('登録名\tトータル\n鈴木\t10');
+  assert.equal(players[0].latest, null);
+});
+
+test('今節：「回」の列は節として拾わない', () => {
+  const text = [
+    '登録名\tトータル\t第1節\t回',
+    '鈴木\t10\t10\t4',
+  ].join('\n');
+  const { players } = parseStandings(text);
+  assert.equal(players[0].latest, 10);
 });

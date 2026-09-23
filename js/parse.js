@@ -6,6 +6,8 @@ const HEADER_PATTERNS = {
   games: /対局数|試合数|回戦/,
   rank: /順位/,
 };
+// 「第1節」「2節」など、節ごとの点数が入った列
+const SETSU_RE = /節/;
 // 雀竜位戦：ポイント列（各回戦の「合計点」は除外）と、各回戦の得失点列
 const JANTORYU_TOTAL_RE = /ポイント|トータル|累計|合計(?!点)/;
 const SCORE_RE = /得失点/;
@@ -54,6 +56,17 @@ function findHeaderRow(rows, requiredPatterns) {
   return -1;
 }
 
+// 「今節」の列＝見出しに「節」が入っている列のうち、数字が1つでも入っている一番右の列。無ければ -1
+// （トータル・対局数・順位の列は節の列にしない）
+function findLatestSetsuColumn(header, body, cols) {
+  const used = new Set(Object.values(cols));
+  for (let i = header.length - 1; i >= 0; i--) {
+    if (used.has(i) || !SETSU_RE.test(header[i] || '')) continue;
+    if (body.some(row => !Number.isNaN(parseNumber(row[i])))) return i;
+  }
+  return -1;
+}
+
 export function parseStandings(text) {
   const rows = splitRows(text);
   if (rows.length === 0) throw new ParseError('貼り付け内容が空です');
@@ -62,18 +75,22 @@ export function parseStandings(text) {
     throw new ParseError('「登録名」「トータル」の見出しが見つかりません。見出し行を含めてコピーしてください');
   }
   const cols = findColumns(rows[hi]);
+  const body = rows.slice(hi + 1);
+  const latestCol = findLatestSetsuColumn(rows[hi], body, cols);
   const players = [];
-  for (const row of rows.slice(hi + 1)) {
+  for (const row of body) {
     const name = row[cols.name] || '';
     const total = parseNumber(row[cols.total]);
     if (!name || Number.isNaN(total)) continue;
     const games = cols.games === undefined ? NaN : parseNumber(row[cols.games]);
     const rank = cols.rank === undefined ? NaN : parseNumber(row[cols.rank]);
+    const latest = latestCol < 0 ? NaN : parseNumber(row[latestCol]);
     players.push({
       rank: Number.isNaN(rank) ? players.length + 1 : rank,
       name,
       total,
       games: Number.isNaN(games) ? null : games,
+      latest: Number.isNaN(latest) ? null : latest,
     });
   }
   if (players.length === 0) throw new ParseError('選手の行が見つかりません');
