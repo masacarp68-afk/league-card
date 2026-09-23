@@ -25,7 +25,7 @@ const MODES = {
     logoUrls: LOGO_URLS,
     upTitle: '昇級（上位から）',
     downTitle: '降級（下位から）',
-    defaults: { title: '第○期 日本プロ麻雀協会 【A○】リーグ', session: '第○節', totalSessions: 12, totalGames: 48, promote1: 3, demote1: 4 },
+    defaults: { title: '第○期 日本プロ麻雀協会 【A○】リーグ', session: '第○節', totalSessions: 12, totalGames: 48, promote1: 3, demote1: 4, medals: false },
   },
   jantoryu: {
     storageKey: 'league-card.settings.jantoryu',
@@ -33,7 +33,7 @@ const MODES = {
     logoUrls: LOGO_URLS,
     upTitle: '通過（上位から）',
     downTitle: '敗退（下位から）',
-    defaults: { title: '第○期 雀竜位戦【○次予選】', session: '○回戦終了時', totalSessions: 0, totalGames: 6, promote1: 4, demote1: 4 },
+    defaults: { title: '第○期 雀竜位戦【○次予選】', session: '○回戦終了時', totalSessions: 0, totalGames: 6, promote1: 4, demote1: 4, medals: false },
   },
   freshstar: {
     storageKey: 'league-card.settings.freshstar',
@@ -41,12 +41,12 @@ const MODES = {
     logoUrls: ['assets/logo-freshstar.png'],
     upTitle: '入賞（上位から）',
     downTitle: '下位（下位から）',
-    defaults: { title: '第○回 フレッシュスターカップ', session: '最終結果', totalSessions: 0, totalGames: 5, promote1: 1, promote2: 1, promote3: 1, demote1: 0 },
+    defaults: { title: '第○回 フレッシュスターカップ', session: '最終結果', totalSessions: 0, totalGames: 5, promote1: 1, promote2: 1, promote3: 1, demote1: 0, medals: true },
   },
 };
 // モード共通の初期値
-const COMMON_DEFAULTS = { promote2: 0, promote3: 0, demote2: 0, theme: 'navy', color: '#1c2f7a', showGames: true };
-const FIELDS = ['title', 'session', 'totalSessions', 'totalGames', 'promote1', 'promote2', 'promote3', 'demote1', 'demote2', 'theme', 'color', 'showGames'];
+const COMMON_DEFAULTS = { promote2: 0, promote3: 0, demote2: 0, theme: 'navy', color: '#1c2f7a', showGames: true, medals: false, credit: '高良成績ジェネレーター' };
+const FIELDS = ['title', 'session', 'totalSessions', 'totalGames', 'promote1', 'promote2', 'promote3', 'demote1', 'demote2', 'theme', 'color', 'showGames', 'medals', 'credit'];
 
 const $ = id => document.getElementById(id);
 let mode = 'league';

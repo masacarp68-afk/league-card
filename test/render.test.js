@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneOf, fmtPt, layoutFor, cardLayout, splitTitle, splitTitleSized, footerText, W, H } from '../js/render.js';
+import { zoneOf, medalOf, fmtPt, layoutFor, cardLayout, splitTitle, splitTitleSized, footerText, W, H } from '../js/render.js';
 
 test('zoneOf: 上位から金・銀・銅、下位から赤・薄赤、間は stay', () => {
   // 22人：上位1名=金、次2名=銀、次3名=銅／下位4名=赤、その上2名=薄赤
@@ -96,4 +96,14 @@ test('cardLayout: 横長のカード（幅÷高さ ≥ 5.5）は1行組み、そ
   assert.equal(cardLayout(448, 87), 'stack');  // 4列×9行
   assert.equal(cardLayout(355, 78), 'stack');  // 5列×10行
   assert.equal(cardLayout(249, 70), 'stack');  // 7列×11行
+});
+
+test('medalOf: 1〜3位は金銀銅、4位以降と「金銀銅なし」のときは色なし', () => {
+  assert.equal(medalOf(1, true), 'gold');
+  assert.equal(medalOf(2, true), 'silver');
+  assert.equal(medalOf(3, true), 'bronze');
+  assert.equal(medalOf(4, true), null);
+  assert.equal(medalOf(1, false), null);
+  assert.equal(medalOf(3, false), null);
+  assert.equal(medalOf(1, undefined), null);
 });
