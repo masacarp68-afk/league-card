@@ -344,7 +344,7 @@ function gamesLabel(p, opts) {
   return opts.totalGames ? `${p.games}/${opts.totalGames}` : `${p.games}`;
 }
 
-// 「pt (今節) 対局数」の1行を maxW に収める組み方を決める（入りきらなければ3つとも小さくする）
+// 「pt 対局数 (今節)」の1行を maxW に収める組み方を決める（入りきらなければ3つとも小さくする）
 function fitPtLine(ctx, pt, latest, label, maxW, unit) {
   const min = Math.round(unit * 0.6);
   for (let px = Math.round(unit); ; px -= 1) {
@@ -367,23 +367,23 @@ function fitPtLine(ctx, pt, latest, label, maxW, unit) {
   }
 }
 
-// fitPtLine で決めた1行を x から描く
+// fitPtLine で決めた1行を x から描く（pt → 対局数 → 今節 の順）
 function drawPtLine(ctx, line, x, y, p) {
   ctx.textAlign = 'left';
   ctx.font = `900 ${line.px}px ${FONT}`;
   ctx.fillStyle = ptColor(line.pt);
   ctx.fillText(line.pt, x, y);
   let px = x + line.ptW + line.gap;
-  if (line.latest) {
-    ctx.font = `700 ${line.latestPx}px ${FONT}`;
-    ctx.fillStyle = ptColor(fmtPt(p.latest));
-    ctx.fillText(line.latest, px, y + line.px * 0.08);
-    px += line.latestW;
-  }
   if (line.label) {
     ctx.font = `400 ${line.gamesPx}px ${FONT}`;
     ctx.fillStyle = COLORS.games;
     ctx.fillText(line.label, px, y + line.px * 0.12);
+    px += line.labelW;
+  }
+  if (line.latest) {
+    ctx.font = `700 ${line.latestPx}px ${FONT}`;
+    ctx.fillStyle = ptColor(fmtPt(p.latest));
+    ctx.fillText(line.latest, px, y + line.px * 0.08);
   }
 }
 
