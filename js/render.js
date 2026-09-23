@@ -4,9 +4,9 @@ export const W = 1920, H = 1080;
 const FONT = '"Noto Sans JP", "Yu Gothic", "Hiragino Sans", "Meiryo", sans-serif';
 
 const MARGIN = 40;           // 左右の余白
-const HEADER_CY = 76;        // ヘッダー（タイトル・バッジ・ロゴ）の中心の高さ
-const HEADER_LINE_Y = 150;   // ヘッダー下の金ライン
-const BODY_TOP = 176;        // 選手一覧の上端
+const HEADER_CY = 80;        // ヘッダー（タイトル・バッジ・ロゴ）の中心の高さ
+const HEADER_LINE_Y = 154;   // ヘッダー下の金ライン
+const BODY_TOP = 172;        // 選手一覧の上端
 const BODY_BOTTOM = H - 48;  // 選手一覧の下端
 const COL_GAP = 16;
 const ROW_GAP = 9;
@@ -182,7 +182,7 @@ function logoContentRect(logo) {
 function drawLogo(ctx, logo, right) {
   if (!logo || !logo.naturalWidth) return right;
   const src = logoContentRect(logo);
-  const d = 100, cy = HEADER_CY;
+  const d = 116, cy = HEADER_CY;
   const aspect = src.w / src.h;
   ctx.fillStyle = '#ffffff';
   if (aspect <= 1.25) {
@@ -209,10 +209,10 @@ function drawLogo(ctx, logo, right) {
 // 「第1節」の金バッジ。バッジの左端の x を返す（節が空なら right のまま）
 function drawSessionBadge(ctx, session, right) {
   if (!session) return right;
-  ctx.font = `700 30px ${FONT}`;
-  const bw = ctx.measureText(session).width + 44, bh = 52;
+  ctx.font = `700 40px ${FONT}`;
+  const bw = ctx.measureText(session).width + 52, bh = 66;
   const bx = right - bw, by = HEADER_CY - bh / 2;
-  roundRect(ctx, bx, by, bw, bh, 8);
+  roundRect(ctx, bx, by, bw, bh, 10);
   ctx.fillStyle = COLORS.gold;
   ctx.fill();
   ctx.fillStyle = COLORS.onMedal;
@@ -225,7 +225,7 @@ function drawSessionBadge(ctx, session, right) {
 // タイトル：前半を小さく、後半を大きく、【 】は金色で左右に少し間を空ける
 function drawTitle(ctx, title, maxW) {
   const { small, large } = splitTitleSized(title);
-  let px = 70;
+  let px = 92;
   const smallPx = () => Math.round(px * 0.66);
   const gap = () => px * 0.12;
   const widthOf = (parts, weight, size) => {
@@ -341,14 +341,14 @@ function gamesLabel(p, opts) {
 // 2行組み：(順位の丸)｜  名前 入会期
 //                    ｜  pt 対局数   （順位の丸の右の空き幅に、2行とも中央寄せ）
 function drawCardStack(ctx, p, x, y, w, h, st, opts, pal, medals) {
-  const unit = Math.min(h * 0.33, w / 10.5);
-  const pad = Math.round(unit * 0.5);
-  const d = Math.round(unit * 1.85);
+  const unit = Math.min(h * 0.37, w / 9);
+  const pad = Math.round(unit * 0.38);
+  const d = Math.round(unit * 1.7);
   drawRankCircle(ctx, p.rank, x + pad + d / 2, y + h / 2, d, pal, medals);
 
-  const tx = x + pad + d + Math.round(unit * 0.45);
+  const tx = x + pad + d + Math.round(unit * 0.35);
   const tw = x + w - Math.round(pad * 0.8) - tx;
-  const nameY = y + h * 0.34, ptY = y + h * 0.70;
+  const nameY = y + h * 0.32, ptY = y + h * 0.71;
   ctx.textBaseline = 'middle';
 
   // 2行とも幅を先に測ってから、空いた分だけ右にずらして中央に置く
@@ -383,9 +383,9 @@ function drawCardStack(ctx, p, x, y, w, h, st, opts, pal, medals) {
 
 // 1行組み：(順位の丸)｜名前 入会期 ……… pt 対局数
 function drawCardRow(ctx, p, x, y, w, h, st, opts, pal, medals) {
-  const unit = Math.min(h * 0.5, w / 15);
-  const pad = Math.round(unit * 0.4);
-  const d = Math.round(h * 0.68);
+  const unit = Math.min(h * 0.56, w / 13);
+  const pad = Math.round(unit * 0.35);
+  const d = Math.round(h * 0.72);
   const midY = y + h / 2 + 1;
   drawRankCircle(ctx, p.rank, x + pad + d / 2, y + h / 2, d, pal, medals);
 
