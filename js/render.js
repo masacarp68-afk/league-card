@@ -473,17 +473,6 @@ function drawPlayers(ctx, players, s, pal) {
   });
 }
 
-// 左下に小さくクレジット
-function drawCredit(ctx, credit) {
-  const text = String(credit || '').trim();
-  if (!text) return;
-  ctx.fillStyle = 'rgba(255,255,255,0.45)';
-  ctx.font = `400 20px ${FONT}`;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(text, MARGIN, H - 16);
-}
-
 function drawFooter(ctx, s) {
   const text = footerText(s.totalSessions, s.totalGames);
   if (!text) return;
@@ -496,7 +485,7 @@ function drawFooter(ctx, s) {
 }
 
 // data: { players: [{ rank, name, total, games, latest?, period? }] }
-// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames, showLatest, medals, credit }
+// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames, showLatest, medals }
 // assets: { logo: HTMLImageElement | null }
 export function renderStandings(data, settings, assets = {}) {
   const canvas = document.createElement('canvas');
@@ -508,7 +497,6 @@ export function renderStandings(data, settings, assets = {}) {
   ctx.fillRect(0, 0, W, H);
   drawHeader(ctx, settings, assets.logo);
   drawPlayers(ctx, data.players, settings, pal);
-  drawCredit(ctx, settings.credit);
   drawFooter(ctx, settings);
   return canvas;
 }
