@@ -11,7 +11,7 @@ const BODY_BOTTOM = H - 48;  // 選手一覧の下端
 const COL_GAP = 16;
 const ROW_GAP = 9;
 const MAX_ROWS = 11;         // 縦にこれ以上は詰めず、列を増やす
-const MAX_CARD_H = 104;
+const MAX_CARD_H = 130;
 const CARD_RADIUS = 8;
 
 const COLORS = {
@@ -29,14 +29,16 @@ const COLORS = {
 
 // ゾーンごとのカードの色。昇級は上位から 金→銀→銅、降級は下位から 赤→薄赤
 // tint はカードの地に重ねる色、border は枠、name は名前の文字色
+// 名前は地のゾーン色と同系になるので、カードの上でも読めるよう明るめにする
 const ZONE_STYLE = {
-  up1:   { tint: 'rgba(242,193,78,0.22)',  border: 'rgba(242,193,78,0.9)',   name: COLORS.gold },
-  up2:   { tint: 'rgba(215,223,234,0.18)', border: 'rgba(215,223,234,0.85)', name: COLORS.silver },
-  up3:   { tint: 'rgba(224,150,95,0.20)',  border: 'rgba(224,150,95,0.85)',  name: COLORS.bronze },
+  up1:   { tint: 'rgba(242,193,78,0.30)',  border: 'rgba(242,193,78,1)',     name: '#ffdf85' },
+  up2:   { tint: 'rgba(215,223,234,0.26)', border: 'rgba(224,232,243,1)',    name: '#f2f6fc' },
+  up3:   { tint: 'rgba(224,150,95,0.32)',  border: 'rgba(236,160,104,1)',    name: '#ffc69b' },
   stay:  { tint: null,                      border: null,                      name: COLORS.name },
-  down2: { tint: 'rgba(255,90,90,0.16)',   border: 'rgba(255,110,110,0.5)',  name: COLORS.name },
-  down1: { tint: 'rgba(255,90,90,0.30)',   border: 'rgba(255,110,110,0.8)',  name: COLORS.name },
+  down2: { tint: 'rgba(255,90,90,0.22)',   border: 'rgba(255,110,110,0.75)', name: COLORS.name },
+  down1: { tint: 'rgba(255,90,90,0.38)',   border: 'rgba(255,120,120,1)',    name: COLORS.name },
 };
+const BORDER_W = 4;         // ゾーンの枠の太さ
 
 // 順位からゾーンを判定。ups = 上位からのグループ人数 [金, 銀, 銅]、downs = 下位からのグループ人数 [赤, 薄赤]
 export function zoneOf(rank, playerCount, ups, downs) {
@@ -66,9 +68,10 @@ export function fmtPt(v) {
   return v < 0 ? `▲${s}` : `+${s}`;
 }
 
-// 人数から列数・行数を決める。縦は MAX_ROWS 行まで詰め、超えたら列を増やす（最低3列）
+// 人数から列数・行数を決める。縦は MAX_ROWS 行まで詰め、超えたら列を増やす（最低2列）
+// 少人数のときに列を増やさないことで、下が空かず1枚ずつ大きく出せる
 export function layoutFor(n) {
-  const cols = Math.max(3, Math.ceil(n / MAX_ROWS));
+  const cols = Math.max(2, Math.ceil(n / MAX_ROWS));
   return { cols, rows: Math.max(1, Math.ceil(n / cols)) };
 }
 
@@ -443,8 +446,10 @@ function drawCard(ctx, p, x, y, w, h, zone, opts, pal, medals) {
     ctx.fill();
   }
   if (st.border) {
-    roundRect(ctx, x + 1, y + 1, w - 2, h - 2, CARD_RADIUS - 1);
-    ctx.lineWidth = 2;
+    // 枠は内側に収める（カードの外にはみ出して隣とくっつかないように）
+    const o = BORDER_W / 2;
+    roundRect(ctx, x + o, y + o, w - BORDER_W, h - BORDER_W, Math.max(1, CARD_RADIUS - o));
+    ctx.lineWidth = BORDER_W;
     ctx.strokeStyle = st.border;
     ctx.stroke();
   }

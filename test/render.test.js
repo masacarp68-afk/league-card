@@ -37,13 +37,16 @@ test('fmtPt: プラスは +、マイナスは ▲、0 は ±、小数1桁', () =
   assert.equal(fmtPt(12), '+12.0');
 });
 
-test('layoutFor: 縦11行まで詰めて、超えたら列を増やす（最低3列）', () => {
-  assert.deepEqual(layoutFor(22), { cols: 3, rows: 8 });
+test('layoutFor: 縦11行まで詰めて、超えたら列を増やす（最低2列）', () => {
+  assert.deepEqual(layoutFor(5), { cols: 2, rows: 3 });
+  assert.deepEqual(layoutFor(17), { cols: 2, rows: 9 });
+  assert.deepEqual(layoutFor(22), { cols: 2, rows: 11 });
+  assert.deepEqual(layoutFor(23), { cols: 3, rows: 8 });
   assert.deepEqual(layoutFor(33), { cols: 3, rows: 11 });
   assert.deepEqual(layoutFor(34), { cols: 4, rows: 9 });
   assert.deepEqual(layoutFor(48), { cols: 5, rows: 10 });
   assert.deepEqual(layoutFor(77), { cols: 7, rows: 11 });
-  assert.deepEqual(layoutFor(1), { cols: 3, rows: 1 });
+  assert.deepEqual(layoutFor(1), { cols: 2, rows: 1 });
 });
 
 test('splitTitle: 【 】で囲んだ部分を gold にする', () => {
