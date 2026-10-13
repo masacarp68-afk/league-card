@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneOf, medalOf, fmtPt, layoutFor, cardLayout, splitTitle, splitTitleSized, footerText, W, H } from '../js/render.js';
+import { zoneOf, medalOf, fmtPt, layoutFor, cardLayout, splitTitle, splitTitleSized, footerText, zoneCountText, W, H } from '../js/render.js';
 
 test('zoneOf: 上位から金・銀・銅、下位から赤・薄赤、間は stay', () => {
   // 22人：上位1名=金、次2名=銀、次3名=銅／下位4名=赤、その上2名=薄赤
@@ -109,4 +109,20 @@ test('medalOf: 1〜3位は金銀銅、4位以降と「金銀銅なし」のと�
   assert.equal(medalOf(1, false), null);
   assert.equal(medalOf(3, false), null);
   assert.equal(medalOf(1, undefined), null);
+});
+
+test('zoneCountText: 昇級・降級の人数を合計して並べる', () => {
+  assert.equal(zoneCountText([1, 1, 4], [5, 0]), '昇級 6名・降級 5名');
+  assert.equal(zoneCountText([3, 0, 0], [4, 0]), '昇級 3名・降級 4名');
+});
+
+test('zoneCountText: 0 の側は出さない。両方0なら空', () => {
+  assert.equal(zoneCountText([3, 0, 0], [0, 0]), '昇級 3名');
+  assert.equal(zoneCountText([0, 0, 0], [4, 2]), '降級 6名');
+  assert.equal(zoneCountText([0, 0, 0], [0, 0]), '');
+});
+
+test('zoneCountText: モードごとの呼び方を使える', () => {
+  assert.equal(zoneCountText([4, 0, 0], [4, 0], '通過', '敗退'), '通過 4名・敗退 4名');
+  assert.equal(zoneCountText([1, 1, 1], [0, 0], '入賞', '下位'), '入賞 3名');
 });

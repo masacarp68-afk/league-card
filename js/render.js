@@ -108,6 +108,16 @@ export function footerText(totalSessions, totalGames) {
   return parts.join('・');
 }
 
+// フッターに出す昇級・降級の人数。段階があっても合計する。0 の側は出さない
+export function zoneCountText(ups, downs, upLabel = '昇級', downLabel = '降級') {
+  const sum = a => (a || []).reduce((t, v) => t + (Number(v) || 0), 0);
+  const up = sum(ups), down = sum(downs);
+  const parts = [];
+  if (up) parts.push(`${upLabel} ${up}名`);
+  if (down) parts.push(`${downLabel} ${down}名`);
+  return parts.join('・');
+}
+
 function hexToRgb(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
   const v = m ? parseInt(m[1], 16) : 0x1c2f7a;
@@ -479,7 +489,10 @@ function drawPlayers(ctx, players, s, pal) {
 }
 
 function drawFooter(ctx, s) {
-  const text = footerText(s.totalSessions, s.totalGames);
+  const text = [
+    zoneCountText([s.promote1, s.promote2, s.promote3], [s.demote1, s.demote2], s.upLabel, s.downLabel),
+    footerText(s.totalSessions, s.totalGames),
+  ].filter(Boolean).join('　');
   if (!text) return;
   ctx.fillStyle = COLORS.footer;
   ctx.font = `700 22px ${FONT}`;
@@ -490,7 +503,7 @@ function drawFooter(ctx, s) {
 }
 
 // data: { players: [{ rank, name, total, games, latest?, period? }] }
-// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames, showLatest, medals }
+// settings: { title, session, totalSessions, totalGames, promote1..3, demote1..2, color, showGames, showLatest, medals, upLabel, downLabel }
 // assets: { logo: HTMLImageElement | null }
 export function renderStandings(data, settings, assets = {}) {
   const canvas = document.createElement('canvas');
