@@ -140,14 +140,35 @@ test('parseJantoryu: 順位列が無ければ今までどおりポイント順�
   assert.deepEqual(players.map(p => [p.rank, p.name]), [[1, 'B'], [2, 'A']]);
 });
 
-test('parseJantoryu: 1 から始まらない数字の列は順位列にしない（卓番・選手番号など）', () => {
+test('parseJantoryu: 「順位」以外の見出しの列は順位列にしない（卓など）', () => {
   const text = [
     '卓\t登録名\tポイント',
+    '1\tA\t10',
+    '2\tB\t30',
+  ].join('\n');
+  const { players } = parseJantoryu(text);
+  assert.deepEqual(players.map(p => [p.rank, p.name]), [[1, 'B'], [2, 'A']]);
+});
+
+test('parseJantoryu: 見出しが空でも 1 から始まらない列は順位列にしない（卓番・選手番号など）', () => {
+  const text = [
+    '\t登録名\tポイント',
     '3\tA\t10',
     '4\tB\t30',
   ].join('\n');
   const { players } = parseJantoryu(text);
   assert.deepEqual(players.map(p => [p.rank, p.name]), [[1, 'B'], [2, 'A']]);
+});
+
+test('parseJantoryu: 昇順でない数字の列は順位列にしない', () => {
+  const text = [
+    '\t登録名\tポイント',
+    '1\tA\t10',
+    '3\tB\t30',
+    '2\tC\t20',
+  ].join('\n');
+  const { players } = parseJantoryu(text);
+  assert.deepEqual(players.map(p => [p.rank, p.name]), [[1, 'B'], [2, 'C'], [3, 'A']]);
 });
 
 test('parseJantoryu: 同点は同順位（1, 2, 2, 4）', () => {
