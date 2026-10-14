@@ -107,8 +107,25 @@ export function rankByTotal(players) {
   });
 }
 
+// 雀竜位戦のシートで順位が入っている列を探す。無ければ -1
+// ポイント列より左にあり、見出しが「順位」か空で、選手の行すべてに 1 から始まる昇順の数字が入っている列。
+// 各回戦の着順はポイント列より右なので選ばれない。卓番・選手番号は 1 から始まらないので選ばれない
+function findStandingRankColumn(header, playerRows, totalCol) {
+  for (let i = 0; i < totalCol; i++) {
+    const h = (header[i] || '').trim();
+    if (h !== '' && !HEADER_PATTERNS.rank.test(h)) continue;
+    const values = playerRows.map(row => parseNumber(row[i]));
+    if (values.length === 0 || values.some(Number.isNaN)) continue;
+    if (values[0] !== 1) continue;
+    if (values.some((v, k) => k > 0 && v < values[k - 1])) continue;
+    return i;
+  }
+  return -1;
+}
+
 // 雀竜位戦のシート：登録名／ポイント のあとに各回戦の 得失点／順位／合計点 が並ぶ
-// 各回戦の「順位」（着順）は無視し、ポイント順に並べ替えて順位を付ける。対局数 = 得失点が入っている回戦の数
+// シートの順位列があればその順位をそのまま使う（ジャンプアップで1位がポイント2位になることがあるため）。
+// 無ければポイント順に並べ替える。各回戦の「順位」（着順）は無視。対局数 = 得失点が入っている回戦の数
 export function parseJantoryu(text) {
   const rows = splitRows(text);
   if (rows.length === 0) throw new ParseError('貼り付け内容が空です');
@@ -120,7 +137,7 @@ export function parseJantoryu(text) {
   const nameCol = header.findIndex(h => NAME_RE.test(h));
   const totalCol = header.findIndex(h => JANTORYU_TOTAL_RE.test(h));
   const scoreCols = header.map((h, i) => (SCORE_RE.test(h) ? i : -1)).filter(i => i >= 0);
-  const players = [];
+  const entries = [];
   for (const row of rows.slice(hi + 1)) {
     const name = row[nameCol] || '';
     const total = parseNumber(row[totalCol]);
@@ -129,10 +146,18 @@ export function parseJantoryu(text) {
     const games = scoreCols.length === 0
       ? null
       : scoreCols.filter(i => !Number.isNaN(parseNumber(row[i]))).length;
-    players.push({ name, total, games });
+    entries.push({ row, name, total, games });
   }
-  if (players.length === 0) throw new ParseError('選手の行が見つかりません');
-  return { players: rankByTotal(players) };
+  if (entries.length === 0) throw new ParseError('選手の行が見つかりません');
+  const rankCol = findStandingRankColumn(header, entries.map(e => e.row), totalCol);
+  if (rankCol < 0) {
+    return { players: rankByTotal(entries.map(({ name, total, games }) => ({ name, total, games }))) };
+  }
+  return {
+    players: entries.map(({ row, name, total, games }) => ({
+      rank: parseNumber(row[rankCol]), name, total, games,
+    })),
+  };
 }
 
 // フレッシュスターカップのシート：順位／氏名／入会期／合計 のあとに 1回戦〜決勝 が並ぶ

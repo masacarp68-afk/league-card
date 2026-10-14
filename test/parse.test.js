@@ -92,7 +92,7 @@ test('parseStandings: 見出し行の上に余計な行があっても読める'
 });
 
 // 見本（雀竜位戦のシート）。①〜⑥の行、各回戦の 得失点／順位／合計点、供託・check sum 行つき
-// ポイント順に並んでいない（稀木 -156.8 が 野口 -110.9 より上）
+// 先頭に見出しのない順位列があり、ポイント順とは一致しない（稀木 -156.8 が 野口 -110.9 より上）
 const JANTORYU_SAMPLE = [
   '\t\t\t①\t\t\t②\t\t\t③\t\t\t④\t\t\t⑤\t\t\t⑥\t\t',
   '\t登録名\tポイント\t得失点\t順位\t合計点\t得失点\t順位\t合計点\t得失点\t順位\t合計点\t得失点\t順位\t合計点\t得失点\t順位\t合計点\t得失点\t順位\t合計点\t⑥',
@@ -104,14 +104,50 @@ const JANTORYU_SAMPLE = [
   '\t\tcheck sum\tok\t\tok\t\tok\t\tok\t\tok\t\tok\t\tok\t\tok\t\tok\t\tok\t\tok',
 ].join('\n');
 
-test('parseJantoryu: ポイントの高い順に並べ替えて順位を付け、得失点の数を対局数にする', () => {
+test('parseJantoryu: シートの順位列（見出しが空でも）をそのまま使い、得失点の数を対局数にする', () => {
   const { players } = parseJantoryu(JANTORYU_SAMPLE);
   assert.deepEqual(players, [
     { rank: 1, name: '森 昌弘', total: 177.5, games: 5 },
     { rank: 2, name: '速水 あいり', total: 90.6, games: 6 },
-    { rank: 3, name: '野口 太郎', total: -110.9, games: 5 },
-    { rank: 4, name: '稀木 深文', total: -156.8, games: 6 },
+    { rank: 3, name: '稀木 深文', total: -156.8, games: 6 },
+    { rank: 4, name: '野口 太郎', total: -110.9, games: 5 },
   ]);
+});
+
+// ジャンプアップ：5回戦までで1位が確定した人は6回戦を打たないので、ポイントは2位より下になる
+test('parseJantoryu: 「順位」列があればポイント順に並べ替えない（ジャンプアップ）', () => {
+  const text = [
+    '順位\t登録名\tポイント\t得失点\t順位\t合計点\t得失点\t順位\t合計点',
+    '1\t森嵜 翔\t152.1\t12.6\t1\t62.6\t\t\t0.0',
+    '2\t浅井 堂岐\t159.9\t7.8\t1\t57.8\t13.7\t1\t63.7',
+    '3\t鈴木 ケンタ\t125.9\t-14.7\t3\t-24.7\t-5.4\t2\t4.6',
+  ].join('\n');
+  const { players } = parseJantoryu(text);
+  assert.deepEqual(players, [
+    { rank: 1, name: '森嵜 翔', total: 152.1, games: 1 },
+    { rank: 2, name: '浅井 堂岐', total: 159.9, games: 2 },
+    { rank: 3, name: '鈴木 ケンタ', total: 125.9, games: 2 },
+  ]);
+});
+
+test('parseJantoryu: 順位列が無ければ今までどおりポイント順に並べ替える', () => {
+  const text = [
+    '登録名\tポイント\t得失点\t順位\t合計点',
+    'A\t10\t5\t3\t-5',
+    'B\t30\t20\t1\t70',
+  ].join('\n');
+  const { players } = parseJantoryu(text);
+  assert.deepEqual(players.map(p => [p.rank, p.name]), [[1, 'B'], [2, 'A']]);
+});
+
+test('parseJantoryu: 1 から始まらない数字の列は順位列にしない（卓番・選手番号など）', () => {
+  const text = [
+    '卓\t登録名\tポイント',
+    '3\tA\t10',
+    '4\tB\t30',
+  ].join('\n');
+  const { players } = parseJantoryu(text);
+  assert.deepEqual(players.map(p => [p.rank, p.name]), [[1, 'B'], [2, 'A']]);
 });
 
 test('parseJantoryu: 同点は同順位（1, 2, 2, 4）', () => {
